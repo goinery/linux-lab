@@ -1,0 +1,484 @@
+#include "mainwindow.h"
+#include "message_widget.h"
+#include "protocol.h"
+#include "constants.h"
+
+#include <QApplication>
+#include <QSplitter>
+#include <QScrollBar>
+#include <QDateTime>
+#include <QShortcut>
+#include <QKeySequence>
+#include <QStatusBar>
+#include <QResizeEvent>
+#include <QKeyEvent>
+#include <QRegularExpression>
+#include <QTimer>
+
+MainWindow::MainWindow(ChatClient *client, QWidget *parent)
+    : QMainWindow(parent), client_(client), currentChat_("general"), zoomLevel_(100) {
+    setWindowTitle(Constants::APP_NAME + " " + Constants::APP_VERSION);
+    setMinimumSize(640, 480);
+    resize(1000, 700);
+    setupUI();
+    setupShortcuts();
+    setupStatusBar();
+
+    connect(client_, &ChatClient::messageReceived, this, &MainWindow::onMessageReceived);
+    connect(client_, &ChatClient::connected, this, [this]() {
+        statusLabel_->setText("已连接到服务器");
+        client_->sendMessage(Protocol::createUserListRequest());
+    });
+    connect(client_, &ChatClient::disconnected, this, [this]() {
+        statusLabel_->setText("已断开连接");
+    });
+    connect(client_, &ChatClient::errorOccurred, this, [this](const QString &err) {
+        statusLabel_->setText("连接错误: " + err);
+    });
+
+    QWidget *generalPage = createChatPage("general");
+    chatStack_->addWidget(generalPage);
+    chatPages_["general"] = generalPage;
+
+    chatTitleLabel_->setText("群聊");
+    currentChat_ = "general";
+
+    statusLabel_->setText(client_->isConnected() ? "已连接到服务器" : "正在连接服务器...");
+    if (client_->isConnected()) {
+        client_->sendMessage(Protocol::createUserListRequest());
+    }
+
+    baseStyleSheet_ = qApp->styleSheet();
+}
+
+void MainWindow::setupUI() {
+    centralWidget_ = new QWidget(this);
+    setCentralWidget(centralWidget_);
+
+    mainLayout_ = new QHBoxLayout(centralWidget_);
+    mainLayout_->setContentsMargins(0, 0, 0, 0);
+    mainLayout_->setSpacing(0);
+
+    splitter_ = new QSplitter(Qt::Horizontal, this);
+
+    QWidget *leftPanel = new QWidget;
+    leftPanel->setObjectName("leftPanel");
+    leftPanel->setMinimumWidth(160);
+    QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->setSpacing(0);
+
+    QLabel *userListTitle = new QLabel("在 线 用 户");
+    userListTitle->setObjectName("userListTitle");
+    userListTitle->setAlignment(Qt::AlignCenter);
+    userListTitle->setFixedHeight(48);
+
+    userListWidget_ = new QListWidget;
+    userListWidget_->setObjectName("userList");
+    userListWidget_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ensureUserItem("general");
+    userListWidget_->item(0)->setSelected(true);
+    refreshAllUserItems();
+
+    leftLayout->addWidget(userListTitle);
+    leftLayout->addWidget(userListWidget_);
+
+    connect(userListWidget_, &QListWidget::itemClicked,
+            this, &MainWindow::onUserItemClicked);
+    connect(userListWidget_, &QListWidget::itemSelectionChanged,
+            this, &MainWindow::refreshAllUserItems);
+
+    QWidget *rightPanel = new QWidget;
+    rightPanel->setObjectName("rightPanel");
+    QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setSpacing(0);
+
+    chatTitleLabel_ = new QLabel;
+    chatTitleLabel_->setObjectName("chatTitleLabel");
+    chatTitleLabel_->setAlignment(Qt::AlignCenter);
+    chatTitleLabel_->setFixedHeight(48);
+
+    chatStack_ = new QStackedWidget;
+    chatStack_->setObjectName("chatStack");
+
+    QWidget *inputArea = new QWidget;
+    inputArea->setObjectName("inputArea");
+    QHBoxLayout *inputLayout = new QHBoxLayout(inputArea);
+    inputLayout->setContentsMargins(12, 10, 12, 10);
+
+    inputEdit_ = new QTextEdit;
+    inputEdit_->setObjectName("inputEdit");
+    inputEdit_->setMinimumHeight(50);
+    inputEdit_->setMaximumHeight(120);
+    inputEdit_->setPlaceholderText("输入消息... (Ctrl+Enter 发送)");
+    inputEdit_->setAcceptRichText(false);
+    inputEdit_->setAttribute(Qt::WA_InputMethodEnabled, true);
+    inputEdit_->setInputMethodHints(Qt::ImhNone);
+    inputEdit_->setTabChangesFocus(true);
+
+    sendButton_ = new QPushButton("发 送");
+    sendButton_->setObjectName("sendButton");
+    sendButton_->setMinimumSize(80, 50);
+    sendButton_->setCursor(Qt::PointingHandCursor);
+
+    inputLayout->addWidget(inputEdit_, 1);
+    inputLayout->addWidget(sendButton_);
+
+    rightLayout->addWidget(chatTitleLabel_);
+    rightLayout->addWidget(chatStack_, 1);
+    rightLayout->addWidget(inputArea);
+
+    splitter_->addWidget(leftPanel);
+    splitter_->addWidget(rightPanel);
+    splitter_->setStretchFactor(0, 0);
+    splitter_->setStretchFactor(1, 1);
+    splitter_->setSizes(QList<int>{220, 780});
+
+    mainLayout_->addWidget(splitter_);
+
+    connect(sendButton_, &QPushButton::clicked, this, &MainWindow::onSendClicked);
+}
+
+void MainWindow::setupShortcuts() {
+    QShortcut *fullscreenShortcut = new QShortcut(QKeySequence("F11"), this);
+    fullscreenShortcut->setContext(Qt::ApplicationShortcut);
+    connect(fullscreenShortcut, &QShortcut::activated, this, &MainWindow::toggleFullscreen);
+
+    QShortcut *sendShortcut = new QShortcut(QKeySequence("Ctrl+Return"), this);
+    sendShortcut->setContext(Qt::ApplicationShortcut);
+    connect(sendShortcut, &QShortcut::activated, this, &MainWindow::onSendClicked);
+
+    auto makeZoomShortcut = [&](const QKeySequence &key, void (MainWindow::*fn)()) {
+        QShortcut *sc = new QShortcut(key, this);
+        sc->setContext(Qt::ApplicationShortcut);
+        connect(sc, &QShortcut::activated, this, fn);
+    };
+
+    makeZoomShortcut(QKeySequence::ZoomIn, &MainWindow::zoomIn);
+    makeZoomShortcut(QKeySequence("Ctrl+="), &MainWindow::zoomIn);
+    makeZoomShortcut(QKeySequence("Ctrl++"), &MainWindow::zoomIn);
+    makeZoomShortcut(QKeySequence::ZoomOut, &MainWindow::zoomOut);
+    makeZoomShortcut(QKeySequence("Ctrl+-"), &MainWindow::zoomOut);
+    makeZoomShortcut(QKeySequence("Ctrl+0"), &MainWindow::zoomReset);
+}
+
+void MainWindow::setupStatusBar() {
+    statusLabel_ = new QLabel("正在连接服务器...");
+    zoomLabel_ = new QLabel("100%");
+
+    statusBar()->addWidget(statusLabel_, 1);
+    statusBar()->addPermanentWidget(zoomLabel_);
+}
+
+void MainWindow::toggleFullscreen() {
+    if (isFullScreen()) {
+        showNormal();
+    } else {
+        showFullScreen();
+    }
+}
+
+void MainWindow::zoomIn() {
+    if (zoomLevel_ >= 200) return;
+    zoomLevel_ += 10;
+    updateZoomLabel();
+}
+
+void MainWindow::zoomOut() {
+    if (zoomLevel_ <= 50) return;
+    zoomLevel_ -= 10;
+    updateZoomLabel();
+}
+
+void MainWindow::zoomReset() {
+    zoomLevel_ = 100;
+    updateZoomLabel();
+}
+
+void MainWindow::updateZoomLabel() {
+    zoomLabel_->setText(QString::number(zoomLevel_) + "%");
+    applyZoomStyleSheet();
+    updateBubbleMaxWidth();
+    emit zoomChanged(zoomLevel_);
+}
+
+void MainWindow::applyZoomStyleSheet() {
+    if (baseStyleSheet_.isEmpty()) {
+        return;
+    }
+
+    const qreal factor = zoomLevel_ / 100.0;
+    QRegularExpression re("font-size\\s*:\\s*(\\d+(?:\\.\\d+)?)px");
+    QString result;
+    int lastPos = 0;
+
+    QRegularExpressionMatchIterator it = re.globalMatch(baseStyleSheet_);
+    while (it.hasNext()) {
+        QRegularExpressionMatch m = it.next();
+        result += baseStyleSheet_.mid(lastPos, m.capturedStart() - lastPos);
+
+        const qreal originalSize = m.captured(1).toDouble();
+        const qreal scaledSize = qBound(8.0, originalSize * factor, 48.0);
+        result += QString("font-size: %1px").arg(QString::number(scaledSize, 'f', 1));
+        lastPos = m.capturedEnd();
+    }
+
+    result += baseStyleSheet_.mid(lastPos);
+    qApp->setStyleSheet(result);
+}
+
+void MainWindow::updateBubbleMaxWidth() {
+    int maxWidth = qMax(250, int(width() * 0.55));
+    for (auto it = chatPages_.begin(); it != chatPages_.end(); ++it) {
+        QWidget *page = it.value();
+        QList<MessageWidget *> msgs = page->findChildren<MessageWidget *>();
+        for (MessageWidget *msg : msgs) {
+            msg->updateWidth(maxWidth);
+        }
+    }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_F11) {
+        toggleFullscreen();
+        event->accept();
+        return;
+    }
+
+    if (event->modifiers() & Qt::ControlModifier) {
+        if (event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) {
+            zoomIn();
+            event->accept();
+            return;
+        }
+        if (event->key() == Qt::Key_Minus || event->key() == Qt::Key_Underscore) {
+            zoomOut();
+            event->accept();
+            return;
+        }
+        if (event->key() == Qt::Key_0) {
+            zoomReset();
+            event->accept();
+            return;
+        }
+    }
+
+    QMainWindow::keyPressEvent(event);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    updateBubbleMaxWidth();
+}
+
+QWidget *MainWindow::createChatPage(const QString &name) {
+    QWidget *page = new QWidget;
+    QVBoxLayout *pageLayout = new QVBoxLayout(page);
+    pageLayout->setContentsMargins(8, 8, 8, 8);
+    pageLayout->setSpacing(0);
+
+    QScrollArea *scrollArea = new QScrollArea;
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setObjectName("chatScrollArea");
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    QWidget *messagesContainer = new QWidget;
+    messagesContainer->setObjectName("messagesContainer");
+    QVBoxLayout *messagesLayout = new QVBoxLayout(messagesContainer);
+    messagesLayout->setAlignment(Qt::AlignTop);
+    messagesLayout->setSpacing(4);
+
+    scrollArea->setWidget(messagesContainer);
+    pageLayout->addWidget(scrollArea);
+
+    chatLayouts_[name] = messagesLayout;
+    chatScrollAreas_[name] = scrollArea;
+
+    return page;
+}
+
+void MainWindow::flushPendingMessagesForChat(const QString &chatName) {
+    if (!pendingMessages_.contains(chatName) || pendingMessages_[chatName].isEmpty()) {
+        return;
+    }
+
+    for (const QJsonObject &msg : pendingMessages_[chatName]) {
+        QString from = msg["from"].toString();
+        QString content = msg["content"].toString();
+        QString time;
+        if (msg.contains("timestamp")) {
+            time = QDateTime::fromSecsSinceEpoch(
+                msg["timestamp"].toVariant().toLongLong()).toString("hh:mm");
+        } else {
+            time = QDateTime::currentDateTime().toString("hh:mm");
+        }
+        addChatMessage(from, content, time, MessageWidget::Left, chatName);
+    }
+
+    pendingMessages_.remove(chatName);
+}
+
+void MainWindow::onSendClicked() {
+    QString text = inputEdit_->toPlainText().trimmed();
+    if (text.isEmpty()) return;
+
+    if (currentChat_ == "general") {
+        client_->sendMessage(Protocol::createGroupChatMessage(client_->username(), text));
+    } else {
+        client_->sendMessage(Protocol::createChatMessage(client_->username(), currentChat_, text));
+    }
+
+    inputEdit_->clear();
+    inputEdit_->setFocus();
+}
+
+void MainWindow::onUserItemClicked(QListWidgetItem *item) {
+    QString name = item->data(Qt::UserRole).toString();
+    if (name.isEmpty()) return;
+
+    if (!chatPages_.contains(name)) {
+        QWidget *page = createChatPage(name);
+        chatStack_->addWidget(page);
+        chatPages_[name] = page;
+    }
+
+    flushPendingMessagesForChat(name);
+
+    chatStack_->setCurrentWidget(chatPages_[name]);
+    currentChat_ = name;
+    chatTitleLabel_->setText(name == "general" ? "群聊" : "与 " + name + " 的对话");
+    clearUnread(name);
+}
+
+void MainWindow::onMessageReceived(QJsonObject message) {
+    QString type = message["type"].toString();
+
+    if (type == "chat") {
+        QString from = message["from"].toString();
+        QString content = message["content"].toString();
+        QString time;
+        if (message.contains("timestamp")) {
+            time = QDateTime::fromSecsSinceEpoch(
+                message["timestamp"].toVariant().toLongLong()).toString("hh:mm");
+        } else {
+            time = QDateTime::currentDateTime().toString("hh:mm");
+        }
+
+        if (currentChat_ == from && chatPages_.contains(from)) {
+            addChatMessage(from, content, time, MessageWidget::Left, from);
+        } else {
+            pendingMessages_[from].append(message);
+            if (!chatPages_.contains(from)) {
+                QWidget *page = createChatPage(from);
+                chatStack_->addWidget(page);
+                chatPages_[from] = page;
+            }
+
+            ensureUserItem(from);
+            incrementUnread(from);
+        }
+    } else if (type == "group_chat") {
+        QString from = message["from"].toString();
+        QString content = message["content"].toString();
+        QString time;
+        if (message.contains("timestamp")) {
+            time = QDateTime::fromSecsSinceEpoch(
+                message["timestamp"].toVariant().toLongLong()).toString("hh:mm");
+        } else {
+            time = QDateTime::currentDateTime().toString("hh:mm");
+        }
+
+        if (from == client_->username()) {
+            addChatMessage(from, content, time, MessageWidget::Right, "general");
+        } else {
+            addChatMessage(from, content, time, MessageWidget::Left, "general");
+            if (currentChat_ != "general") {
+                incrementUnread("general");
+            }
+        }
+    } else if (type == "user_list") {
+        onUserListReceived(message["users"].toArray());
+    } else if (type == "system") {
+        QString content = message["content"].toString();
+        QString targetChat = message["target_chat"].toString();
+        if (!targetChat.isEmpty()) {
+            ensureChatPage(targetChat);
+            addSystemMessageToChat(content, targetChat);
+        } else {
+            onSystemMessage(content);
+        }
+    }
+}
+
+void MainWindow::addChatMessage(const QString &username, const QString &content,
+                                const QString &time, MessageWidget::MessageSide side,
+                                const QString &targetChat) {
+    const QString chatName = targetChat.isEmpty() ? currentChat_ : targetChat;
+    if (!chatLayouts_.contains(chatName)) return;
+
+    QVBoxLayout *layout = chatLayouts_[chatName];
+
+    int maxWidth = qMax(250, int(width() * 0.55));
+    MessageWidget *msgWidget = new MessageWidget(username, content, time, side, maxWidth);
+    layout->addWidget(msgWidget);
+
+    QScrollArea *scrollArea = chatScrollAreas_[chatName];
+    if (scrollArea) {
+        QScrollBar *bar = scrollArea->verticalScrollBar();
+        QTimer::singleShot(50, this, [bar]() { bar->setValue(bar->maximum()); });
+    }
+}
+
+void MainWindow::updateBaseStyleSheet() {
+    baseStyleSheet_ = qApp->styleSheet();
+}
+
+void MainWindow::onSystemMessage(const QString &content) {
+    if (chatPages_.contains("general")) {
+        addSystemMessage(content);
+    }
+}
+
+void MainWindow::addSystemMessage(const QString &content) {
+    if (!chatLayouts_.contains("general")) return;
+
+    QVBoxLayout *layout = chatLayouts_["general"];
+
+    QLabel *sysLabel = new QLabel(content);
+    sysLabel->setObjectName("systemMessage");
+    sysLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(sysLabel);
+
+    QScrollArea *scrollArea = chatScrollAreas_["general"];
+    if (scrollArea) {
+        QScrollBar *bar = scrollArea->verticalScrollBar();
+        QTimer::singleShot(50, this, [bar]() { bar->setValue(bar->maximum()); });
+    }
+}
+
+void MainWindow::ensureChatPage(const QString &chatName) {
+    if (!chatPages_.contains(chatName)) {
+        QWidget *page = createChatPage(chatName);
+        chatStack_->addWidget(page);
+        chatPages_[chatName] = page;
+    }
+}
+
+void MainWindow::addSystemMessageToChat(const QString &content, const QString &chatName) {
+    if (!chatLayouts_.contains(chatName)) return;
+
+    QVBoxLayout *layout = chatLayouts_[chatName];
+
+    QLabel *sysLabel = new QLabel(content);
+    sysLabel->setObjectName("systemMessage");
+    sysLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(sysLabel);
+
+    QScrollArea *scrollArea = chatScrollAreas_[chatName];
+    if (scrollArea) {
+        QScrollBar *bar = scrollArea->verticalScrollBar();
+        QTimer::singleShot(50, this, [bar]() { bar->setValue(bar->maximum()); });
+    }
+}

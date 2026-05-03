@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.16)
+
+set(CHATROOM_PROGRAM_NAME "chatroom")
+project(${CHATROOM_PROGRAM_NAME} VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
+
+add_subdirectory(src)
+
+install(TARGETS ${CHATROOM_PROGRAM_NAME} RUNTIME DESTINATION bin)
+
+set(CPACK_PACKAGE_NAME "${CHATROOM_PROGRAM_NAME}")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION "Modern Multi-threaded Chat Room")
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5core5a,libqt5widgets5,libqt5network5,fontconfig")
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-cjk,fonts-wqy-microhei,fcitx5-frontend-qt5|fcitx-frontend-qt5|ibus")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "student")
+include(CPack)

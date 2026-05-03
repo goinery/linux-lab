@@ -1,0 +1,59 @@
+# Build output
+build/
+.trae/
+bin/
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt.user
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+cmake_clean.cmake
+install_manifest.txt
+*.cmake
+build.make
+flags.make
+depend.make
+progress.make
+
+# Qt autogen
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.moc
+*.pch
+*.pdb
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.autosave
+
+# CPack
+*.deb
+*.rpm
+*.tar.gz
+_Pack_Packages/
+
+# Misc
+.DS_Store
+*.log
+*.bak
+*.swp
+*~
+
+# Travis / CI
+.travis.yml
+.clang-format
+
+# Third-party
+*.ttf.bak

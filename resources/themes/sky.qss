@@ -1,0 +1,348 @@
+* {
+    font-family: "LXGW WenKai", "Huawei Sans", "Noto Sans CJK SC", "Noto Sans SC", "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Source Han Sans CN", "Microsoft YaHei", "Segoe UI", "PingFang SC", sans-serif;
+}
+
+QWidget {
+    font-size: 14px;
+    color: #2d3a52;
+}
+
+QMainWindow, #rootWidget {
+    background: #e7f0f8;
+}
+
+#titleBar {
+    background: #cddfef;
+    border-bottom: 1px solid #bfd4e8;
+}
+#titleBarIcon {
+    font-size: 16px;
+    color: #4a8fd4;
+    background: #eef5fc;
+    border-radius: 13px;
+}
+#titleBarLabel {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2a4163;
+}
+#winMinBtn, #winMaxBtn, #winCloseBtn {
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    padding: 0px;
+    color: #485e7a;
+}
+#winMinBtn:hover, #winMaxBtn:hover {
+    background: #bcd0e8;
+}
+#winCloseBtn:hover {
+    background: #e07070;
+    color: #ffffff;
+}
+
+#bodyWrap {
+    background: transparent;
+}
+
+#sideBar {
+    background: #d2e4f4;
+    border: none;
+}
+#sideLogo {
+    font-size: 13px;
+    font-weight: 800;
+    background: #4a8fd4;
+    color: #ffffff;
+    border-radius: 21px;
+}
+#sideBarBtn {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    color: #35567a;
+}
+#sideBarBtn:hover {
+    background: #bed5ec;
+}
+#sideBarBtn:pressed {
+    background: #a8c6e2;
+}
+
+#mainArea {
+    background: transparent;
+}
+
+#topBar {
+    background: #f5faff;
+    border-radius: 16px;
+    border: 1px solid #d2e4f3;
+}
+#topBarTitle {
+    font-size: 17px;
+    font-weight: 800;
+    color: #2a4163;
+}
+#topBarSubtitle {
+    font-size: 13px;
+    color: #60799e;
+    font-weight: 500;
+}
+#topBarBadge {
+    font-size: 11px;
+    color: #4a8fd4;
+    background: #ddeefc;
+    border-radius: 10px;
+    padding: 3px 10px;
+    font-weight: 600;
+}
+
+QMenuBar {
+    background: #f6f9fd;
+    border-radius: 12px;
+    padding: 5px 10px;
+    color: #2a4163;
+    border: 1px solid #dbebf9;
+}
+QMenuBar::item:selected {
+    background: #d9e9f7;
+    border-radius: 10px;
+}
+
+QMenu {
+    background: #ffffff;
+    border: 1px solid #cbdbf0;
+    border-radius: 12px;
+    padding: 6px;
+}
+QMenu::item {
+    padding: 8px 32px 8px 16px;
+    border-radius: 8px;
+}
+QMenu::item:selected {
+    background: #e5f0fa;
+}
+
+QPushButton {
+    border: 1px solid #bccde1;
+    border-radius: 12px;
+    padding: 9px 18px;
+    background: #f5f9ff;
+    color: #2a4163;
+    font-weight: 500;
+}
+QPushButton#primaryButton, QPushButton#sendButton {
+    background: #4a8fd4;
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+QPushButton#primaryButton:hover, QPushButton#sendButton:hover {
+    background: #3b7ec2;
+}
+QPushButton:hover {
+    background: #dfecf9;
+}
+
+QFrame#card {
+    background: #fbfdff;
+    border: 1px solid #d8e6f5;
+    border-radius: 20px;
+}
+
+#pageScroll {
+    background: transparent;
+    border: none;
+}
+
+#cardTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #192d4b;
+    padding-bottom: 2px;
+}
+
+QLabel {
+    color: #2a3f5e;
+}
+
+QLineEdit, QTextEdit#inputEdit {
+    background: #ffffff;
+    border: 1px solid #c6d8ec;
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #223754;
+}
+QLineEdit:focus, QTextEdit#inputEdit:focus {
+    border: 1.5px solid #4a8fd4;
+}
+
+QListWidget {
+    background: #ffffff;
+    border: 1px solid #c6d8ec;
+    border-radius: 12px;
+    padding: 4px;
+}
+QListWidget::item {
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 1px 2px;
+    color: #2a3f5e;
+}
+QListWidget::item:selected {
+    background: #4a8fd4;
+    color: #ffffff;
+}
+
+#statusLabel {
+    color: #c03b46;
+    min-height: 24px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+#leftPanel {
+    background: #e7f0fa;
+    border-radius: 16px;
+    border: 1px solid #d2e4f3;
+}
+
+#userListTitle {
+    color: #2a4163;
+    background: transparent;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+QListWidget#userList {
+    background: transparent;
+    border: 1px solid #c4d8ee;
+    border-radius: 12px;
+    outline: none;
+}
+QListWidget#userList::item {
+    color: #2a4163;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 10px;
+    margin: 2px 6px;
+}
+QListWidget#userList::item:hover {
+    background: #d9e9f7;
+}
+QListWidget#userList::item:selected {
+    background: #4a8fd4;
+    border: 1px solid #3c7bc0;
+    color: #ffffff;
+}
+
+#rightPanel {
+    background: #f4f8fd;
+    border-radius: 16px;
+}
+
+#chatTitleLabel {
+    color: #1e3457;
+    background: transparent;
+    border: none;
+    font-weight: 600;
+    font-size: 15px;
+}
+#chatScrollArea, #messagesContainer {
+    background: #f9fcff;
+    border: 1px solid #d3e1f0;
+    border-radius: 14px;
+}
+
+#inputArea {
+    background: transparent;
+    border: none;
+}
+
+#avatarSelf {
+    background: #4a8fd4;
+    color: #ffffff;
+    border-radius: 20px;
+    border: 2px solid #7db5e6;
+}
+#avatarOther {
+    background: #8ba4c2;
+    color: #ffffff;
+    border-radius: 20px;
+    border: 2px solid #afc4db;
+}
+
+#bubbleSelf {
+    background: #4a8fd4;
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 10px 15px;
+}
+#bubbleOther {
+    background: #e9f1fc;
+    color: #223754;
+    border-radius: 16px;
+    border: 1px solid #c4d8ee;
+    padding: 10px 15px;
+}
+
+#nameSelf, #nameOther, #timeLabel {
+    color: #5c708f;
+    font-size: 12px;
+}
+#systemMessage {
+    color: #5c708f;
+    font-size: 12px;
+    background: transparent;
+    padding: 4px 0;
+}
+
+QStatusBar {
+    background: #eef5fc;
+    color: #344a67;
+    border-top: 1px solid #d8e6f2;
+    font-size: 12px;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: #b8c8dc;
+    border-radius: 4px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #9db0c8;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+
+QRadioButton {
+    spacing: 8px;
+    padding: 4px 0;
+}
+QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 11px;
+    border: 2px solid #bccde1;
+}
+QRadioButton::indicator:checked {
+    background: #4a8fd4;
+    border: 2px solid #3b7ec2;
+}
+
+QSplitter::handle {
+    background: #cdddec;
+    width: 1px;
+}
