@@ -432,8 +432,8 @@ void UnifiedFlowWindow::centerToHalfScreen() {
     }
 
     const QRect area = screen->availableGeometry();
-    const int w = int(area.width() * 0.4);
-    const int h = int(area.height() * 0.4);
+    const int w = int(area.width() * 0.45);
+    const int h = int(area.height() * 0.45);
     resize(w, h);
     move(area.x() + (area.width() - w) / 2, area.y() + (area.height() - h) / 2);
 }
