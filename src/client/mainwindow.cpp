@@ -90,6 +90,7 @@ void MainWindow::setupUI() {
 
     QWidget *rightPanel = new QWidget;
     rightPanel->setObjectName("rightPanel");
+    rightPanel->setMinimumWidth(400);
     QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
@@ -269,6 +270,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
 void MainWindow::resizeEvent(QResizeEvent *event) {
     QMainWindow::resizeEvent(event);
+    if (isWindow()) {
+        resize(qMax(width(), 640), qMax(height(), 480));
+    }
     updateBubbleMaxWidth();
 }
 

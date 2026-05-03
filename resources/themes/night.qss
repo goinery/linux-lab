@@ -288,14 +288,13 @@ QListWidget#userList::item:selected {
     color: #f4fbff;
     border-radius: 16px;
     font-weight: 500;
-    padding: 10px 15px;
+    border: none;
 }
 #bubbleOther {
     background: #192c44;
     color: #d2e2f5;
     border-radius: 16px;
     border: 1px solid #335378;
-    padding: 10px 15px;
 }
 
 #nameSelf {

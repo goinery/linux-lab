@@ -1,10 +1,11 @@
 #include "message_widget.h"
 #include <QFontMetrics>
+#include <QTextDocument>
 
 MessageWidget::MessageWidget(const QString &username, const QString &content,
                              const QString &time, MessageSide side,
                              int maxBubbleWidth, QWidget *parent)
-    : QWidget(parent), maxBubbleWidth_(maxBubbleWidth) {
+    : QWidget(parent), maxBubbleWidth_(maxBubbleWidth), contentText_(content) {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -36,26 +37,18 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     nameFont.setBold(true);
     nameLabel->setFont(nameFont);
 
-    QString wrappedContent;
-    const QStringList originalLines = content.split('\n');
-    for (int i = 0; i < originalLines.size(); ++i) {
-        const QString &line = originalLines[i];
-        for (int j = 0; j < line.length(); j += 48) {
-            if (j > 0) wrappedContent += '\n';
-            wrappedContent += line.mid(j, 48);
-        }
-        if (i < originalLines.size() - 1) wrappedContent += '\n';
-    }
+    bubbleEdit_ = new QTextEdit;
+    bubbleEdit_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
+    bubbleEdit_->setReadOnly(true);
+    bubbleEdit_->setPlainText(content);
+    bubbleEdit_->setFrameStyle(QFrame::NoFrame);
+    bubbleEdit_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    bubbleEdit_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    bubbleEdit_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    bubbleEdit_->setTabChangesFocus(true);
+    bubbleEdit_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-    bubbleLabel_ = new QLabel;
-    bubbleLabel_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
-    bubbleLabel_->setTextFormat(Qt::PlainText);
-    bubbleLabel_->setText(wrappedContent);
-    bubbleLabel_->setWordWrap(false);
-    bubbleLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    bubbleLabel_->setMinimumSize(0, 0);
-
-    fitBubbleSize(wrappedContent);
+    fitBubbleSize();
 
     QLabel *timeLabel = new QLabel(time);
     timeLabel->setObjectName("timeLabel");
@@ -64,7 +57,7 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     timeLabel->setFont(timeFont);
 
     bubbleLayout_->addWidget(nameLabel);
-    bubbleLayout_->addWidget(bubbleLabel_);
+    bubbleLayout_->addWidget(bubbleEdit_);
     bubbleLayout_->addWidget(timeLabel);
 
     if (side == Right) {
@@ -82,31 +75,37 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     }
 
     mainLayout->addLayout(rowLayout);
-
-    const int minHeight = qMax(56, bubbleH_ + 30);
-    setMinimumHeight(minHeight);
 }
 
-void MessageWidget::fitBubbleSize(const QString &wrappedText) {
-    QFont msgFont;
-    msgFont.setPointSize(13);
-    bubbleLabel_->setFont(msgFont);
+void MessageWidget::fitBubbleSize() {
+    bubbleEdit_->ensurePolished();
+    QTextDocument *doc = bubbleEdit_->document();
 
-    QFontMetrics fm(msgFont);
-    const QStringList lines = wrappedText.split('\n');
+    const int margin = 12;
+    doc->setDocumentMargin(margin);
+
+    const QFontMetrics fm(bubbleEdit_->fontMetrics());
+    const QStringList lines = contentText_.split('\n');
     int maxLineW = 0;
-    for (const QString &l : lines) {
-        maxLineW = qMax(maxLineW, fm.horizontalAdvance(l));
+    for (const QString &line : lines) {
+        maxLineW = qMax(maxLineW, fm.horizontalAdvance(line));
     }
 
-    bubbleW_ = qMin(maxLineW + 30, maxBubbleWidth_);
-    if (bubbleW_ < 20) bubbleW_ = 20;
+    const int totalMargin = margin * 2;
+    const int bubbleW = qBound(20, qMin(maxLineW + totalMargin + 6, maxBubbleWidth_), maxBubbleWidth_);
 
-    bubbleH_ = fm.lineSpacing() * lines.size() + 24;
-    if (bubbleH_ < 20) bubbleH_ = 32;
-    bubbleLabel_->setFixedSize(bubbleW_, bubbleH_);
+    doc->setTextWidth(bubbleW - totalMargin);
+    bubbleEdit_->setFixedWidth(bubbleW);
+
+    const qreal docH = doc->size().height();
+    const int bubbleH = qMax(32, int(docH) + totalMargin);
+    bubbleEdit_->setFixedHeight(bubbleH);
+
+    setMinimumHeight(qMax(56, bubbleH + 30));
 }
 
 void MessageWidget::updateWidth(int newMaxWidth) {
+    if (maxBubbleWidth_ == newMaxWidth) return;
     maxBubbleWidth_ = newMaxWidth;
+    fitBubbleSize();
 }

@@ -279,14 +279,13 @@ QListWidget#userList::item:selected {
     background: #4a8fd4;
     color: #ffffff;
     border-radius: 16px;
-    padding: 10px 15px;
+    border: none;
 }
 #bubbleOther {
     background: #e9f1fc;
     color: #223754;
     border-radius: 16px;
     border: 1px solid #c4d8ee;
-    padding: 10px 15px;
 }
 
 #nameSelf, #nameOther, #timeLabel {

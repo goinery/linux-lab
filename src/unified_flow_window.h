@@ -25,6 +25,7 @@ public:
 
 protected:
     void changeEvent(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:

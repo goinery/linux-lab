@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QLabel>
+#include <QTextEdit>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
@@ -22,13 +23,12 @@ public:
     void updateWidth(int newMaxWidth);
 
 private:
-    void fitBubbleSize(const QString &wrappedText);
+    void fitBubbleSize();
 
     int maxBubbleWidth_;
-    QLabel *bubbleLabel_;
+    QTextEdit *bubbleEdit_;
     QVBoxLayout *bubbleLayout_;
-    int bubbleW_;
-    int bubbleH_;
+    QString contentText_;
 };
 
 #endif
