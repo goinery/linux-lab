@@ -1,6 +1,8 @@
 #include "message_widget.h"
 #include <QFontMetrics>
 #include <QTextDocument>
+#include <QTextFrame>
+#include <QTextFrameFormat>
 
 MessageWidget::MessageWidget(const QString &username, const QString &content,
                              const QString &time, MessageSide side,
@@ -87,6 +89,11 @@ void MessageWidget::fitBubbleSize() {
 
     const int margin = 12;
     doc->setDocumentMargin(margin);
+
+    QTextFrameFormat rootFormat = doc->rootFrame()->frameFormat();
+    rootFormat.setMargin(0);
+    rootFormat.setPadding(0);
+    doc->rootFrame()->setFrameFormat(rootFormat);
 
     const QFontMetrics fm(bubbleEdit_->fontMetrics());
     const QStringList lines = contentText_.split('\n');

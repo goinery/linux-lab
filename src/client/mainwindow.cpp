@@ -14,12 +14,14 @@
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QTimer>
+#include <QInputDialog>
 
 MainWindow::MainWindow(ChatClient *client, QWidget *parent)
     : QMainWindow(parent), client_(client), currentChat_("general"), zoomLevel_(100) {
     setWindowTitle(Constants::APP_NAME + " " + Constants::APP_VERSION);
     setMinimumSize(640, 480);
     resize(1000, 700);
+    setupMenuBar();
     setupUI();
     setupShortcuts();
     setupStatusBar();
@@ -151,23 +153,25 @@ void MainWindow::setupShortcuts() {
     sendShortcut->setContext(Qt::ApplicationShortcut);
     connect(sendShortcut, &QShortcut::activated, this, &MainWindow::onSendClicked);
 
-    auto makeZoomShortcut = [&](const QKeySequence &key, void (MainWindow::*fn)()) {
-        QShortcut *sc = new QShortcut(key, this);
-        sc->setContext(Qt::ApplicationShortcut);
-        connect(sc, &QShortcut::activated, this, fn);
-    };
+    QShortcut *zoomInShortcut = new QShortcut(QKeySequence::ZoomIn, this);
+    zoomInShortcut->setContext(Qt::ApplicationShortcut);
+    connect(zoomInShortcut, &QShortcut::activated, this, &MainWindow::zoomIn);
 
-    makeZoomShortcut(QKeySequence::ZoomIn, &MainWindow::zoomIn);
-    makeZoomShortcut(QKeySequence("Ctrl+="), &MainWindow::zoomIn);
-    makeZoomShortcut(QKeySequence("Ctrl++"), &MainWindow::zoomIn);
-    makeZoomShortcut(QKeySequence::ZoomOut, &MainWindow::zoomOut);
-    makeZoomShortcut(QKeySequence("Ctrl+-"), &MainWindow::zoomOut);
-    makeZoomShortcut(QKeySequence("Ctrl+0"), &MainWindow::zoomReset);
+    QShortcut *zoomOutShortcut = new QShortcut(QKeySequence::ZoomOut, this);
+    zoomOutShortcut->setContext(Qt::ApplicationShortcut);
+    connect(zoomOutShortcut, &QShortcut::activated, this, &MainWindow::zoomOut);
+
+    QShortcut *zoomResetShortcut = new QShortcut(QKeySequence("Ctrl+0"), this);
+    zoomResetShortcut->setContext(Qt::ApplicationShortcut);
+    connect(zoomResetShortcut, &QShortcut::activated, this, &MainWindow::zoomReset);
 }
 
 void MainWindow::setupStatusBar() {
     statusLabel_ = new QLabel("正在连接服务器...");
     zoomLabel_ = new QLabel("100%");
+    zoomLabel_->setCursor(Qt::PointingHandCursor);
+    zoomLabel_->setToolTip("双击输入自定义缩放比例");
+    zoomLabel_->installEventFilter(this);
 
     statusBar()->addWidget(statusLabel_, 1);
     statusBar()->addPermanentWidget(zoomLabel_);
@@ -242,12 +246,6 @@ void MainWindow::updateBubbleMaxWidth() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_F11) {
-        toggleFullscreen();
-        event->accept();
-        return;
-    }
-
     QMainWindow::keyPressEvent(event);
 }
 
@@ -257,6 +255,20 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
         resize(qMax(width(), 640), qMax(height(), 480));
     }
     updateBubbleMaxWidth();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == zoomLabel_ && event->type() == QEvent::MouseButtonDblClick) {
+        bool ok;
+        int val = QInputDialog::getInt(this, "缩放比例", "输入缩放比例 (50-200):",
+                                       zoomLevel_, 50, 200, 10, &ok);
+        if (ok) {
+            zoomLevel_ = val;
+            updateZoomLabel();
+        }
+        return true;
+    }
+    return QMainWindow::eventFilter(obj, event);
 }
 
 QWidget *MainWindow::createChatPage(const QString &name) {

@@ -223,7 +223,11 @@ void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
 }
 
 void UnifiedFlowWindow::onToggleTheme() {
-    themeIndex_ = (themeIndex_ + 1) % 3;
+    setTheme((themeIndex_ + 1) % 4);
+}
+
+void UnifiedFlowWindow::setTheme(int index) {
+    themeIndex_ = index;
     applyTheme();
 }
 
@@ -428,12 +432,15 @@ void UnifiedFlowWindow::centerToHalfScreen() {
 }
 
 void UnifiedFlowWindow::applyTheme() {
-    QString themePath = ":/theme_mint.qss";
-    QString themeName = "森氧";
+    QString themePath = ":/theme_gray.qss";
+    QString themeName = "素白";
     if (themeIndex_ == 1) {
+        themePath = ":/theme_mint.qss";
+        themeName = "森氧";
+    } else if (themeIndex_ == 2) {
         themePath = ":/theme_sky.qss";
         themeName = "云海";
-    } else if (themeIndex_ == 2) {
+    } else if (themeIndex_ == 3) {
         themePath = ":/theme_night.qss";
         themeName = "夜航";
     }
@@ -452,6 +459,6 @@ void UnifiedFlowWindow::applyTheme() {
     }
 
     if (themeButton_) {
-        themeButton_->setToolTip("主题: " + themeName + " (点击切换)");
+        themeButton_->setToolTip("主题: " + themeName + " (点击选择)");
     }
 }

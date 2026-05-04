@@ -1,6 +1,7 @@
 # Build output
 build/
 .trae/
+.claude/
 bin/
 *.o
 *.obj

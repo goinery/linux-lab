@@ -4,6 +4,7 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QMenu>
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -94,6 +95,14 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     QPushButton *themeSideBtn = sideBtn("◑", "切换主题",
                                          &UnifiedFlowWindow::onToggleTheme);
     themeButton_ = themeSideBtn;
+
+    QMenu *themeMenu = new QMenu(themeButton_);
+    themeMenu->addAction("素白", this, [this]() { setTheme(0); });
+    themeMenu->addAction("森氧", this, [this]() { setTheme(1); });
+    themeMenu->addAction("云海", this, [this]() { setTheme(2); });
+    themeMenu->addAction("夜航", this, [this]() { setTheme(3); });
+    themeButton_->setMenu(themeMenu);
+
     sideLayout->addSpacing(12);
 
     QWidget *zoomPanel = new QWidget;
@@ -166,7 +175,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         box.setInformativeText(
             "<p style='font-size:13px;line-height:1.8;'>"
             "现代化多线程图形界面聊天室<br>"
-            "基于 <b>Qt5 + CMake</b> 构建 · 深浅主题切换</p>"
+            "基于 <b>Qt + CMake</b> 构建 · 多主题切换</p>"
             "<hr style='border:0.5px solid #d0e0d0;'>"
             "<p style='font-size:12px;color:#666;'>"
             "<b>功能</b>　服务端/客户端双模式 · 禁言管理 · 服务器公告<br>"
@@ -217,7 +226,6 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     topBarLayout->addWidget(topBarSubtitleLabel_);
     topBarLayout->addStretch();
 
-    QLabel *topBarBadge = new QLabel("✦ Qt5");
     topBarBadge->setObjectName("topBarBadge");
     topBarLayout->addWidget(topBarBadge);
 
@@ -467,7 +475,4 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
 
     rootLayout->addWidget(titleBar_);
     rootLayout->addWidget(bodyWrap);
-
-    connect(themeButton_, &QPushButton::clicked, this,
-            &UnifiedFlowWindow::onToggleTheme);
 }

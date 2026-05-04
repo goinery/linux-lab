@@ -55,7 +55,7 @@ void MainWindow::setupMenuBar() {
         QMessageBox::about(this, "关于 ChatRoom",
             "<h2>ChatRoom v1.0</h2>"
             "<p>现代化多线程图形界面聊天室</p>"
-            "<p>基于 Qt5 + CMake 构建</p>"
+            "<p>基于 Qt + CMake 构建</p>"
             "<hr>"
             "<p><b>快捷键：</b></p>"
             "<p>F11 - 全屏切换</p>"
