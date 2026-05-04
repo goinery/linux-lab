@@ -231,6 +231,7 @@ void MainWindow::applyZoomStyleSheet() {
     }
 
     result += originalStyleSheet_.mid(lastPos);
+    qApp->setStyleSheet("");
     qApp->setStyleSheet(result);
 }
 

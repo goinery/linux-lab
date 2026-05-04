@@ -226,9 +226,6 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     topBarLayout->addWidget(topBarSubtitleLabel_);
     topBarLayout->addStretch();
 
-    topBarBadge->setObjectName("topBarBadge");
-    topBarLayout->addWidget(topBarBadge);
-
     pages_ = new QStackedWidget;
     pages_->setObjectName("pages");
 
