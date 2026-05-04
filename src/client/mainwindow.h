@@ -91,6 +91,7 @@ private:
     QLabel *zoomLabel_;
     QLabel *statusLabel_;
     QString baseStyleSheet_;
+    QString originalStyleSheet_;
 };
 
 #endif

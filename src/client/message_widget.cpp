@@ -40,7 +40,11 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     bubbleEdit_ = new QTextEdit;
     bubbleEdit_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
     bubbleEdit_->setReadOnly(true);
-    bubbleEdit_->setPlainText(content);
+    QString wrappedContent = content;
+    while (wrappedContent.endsWith('\n')) {
+        wrappedContent.chop(1);
+    }
+    bubbleEdit_->setPlainText(wrappedContent);
     bubbleEdit_->setFrameStyle(QFrame::NoFrame);
     bubbleEdit_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     bubbleEdit_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -97,11 +101,10 @@ void MessageWidget::fitBubbleSize() {
     doc->setTextWidth(bubbleW - totalMargin);
     bubbleEdit_->setFixedWidth(bubbleW);
 
-    const qreal docH = doc->size().height();
-    const int bubbleH = qMax(32, int(docH) + totalMargin);
+    const int bubbleH = qMax(32, int(doc->size().height()));
     bubbleEdit_->setFixedHeight(bubbleH);
 
-    setMinimumHeight(qMax(56, bubbleH + 30));
+    setMinimumHeight(qMax(70, bubbleH + 46));
 }
 
 void MessageWidget::updateWidth(int newMaxWidth) {

@@ -91,7 +91,6 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     sideLayout->addWidget(sideLogo, 0, Qt::AlignHCenter);
     sideLayout->addSpacing(8);
 
-    sideBtn("◰", "全屏 (F11)", &UnifiedFlowWindow::onToggleFullscreen);
     QPushButton *themeSideBtn = sideBtn("◑", "切换主题",
                                          &UnifiedFlowWindow::onToggleTheme);
     themeButton_ = themeSideBtn;

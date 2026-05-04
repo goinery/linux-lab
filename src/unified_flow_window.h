@@ -39,7 +39,6 @@ private slots:
     void onClientError(const QString &err);
     void onClientMessageReceived(const QJsonObject &msg);
     void onToggleTheme();
-    void onToggleFullscreen();
     void onWinMinimize();
     void onWinMaxRestore();
     void onWinClose();

@@ -49,6 +49,7 @@ MainWindow::MainWindow(ChatClient *client, QWidget *parent)
     }
 
     baseStyleSheet_ = qApp->styleSheet();
+    originalStyleSheet_ = baseStyleSheet_;
 }
 
 void MainWindow::setupUI() {
@@ -205,7 +206,7 @@ void MainWindow::updateZoomLabel() {
 }
 
 void MainWindow::applyZoomStyleSheet() {
-    if (baseStyleSheet_.isEmpty()) {
+    if (originalStyleSheet_.isEmpty()) {
         return;
     }
 
@@ -214,10 +215,10 @@ void MainWindow::applyZoomStyleSheet() {
     QString result;
     int lastPos = 0;
 
-    QRegularExpressionMatchIterator it = re.globalMatch(baseStyleSheet_);
+    QRegularExpressionMatchIterator it = re.globalMatch(originalStyleSheet_);
     while (it.hasNext()) {
         QRegularExpressionMatch m = it.next();
-        result += baseStyleSheet_.mid(lastPos, m.capturedStart() - lastPos);
+        result += originalStyleSheet_.mid(lastPos, m.capturedStart() - lastPos);
 
         const qreal originalSize = m.captured(1).toDouble();
         const qreal scaledSize = qBound(8.0, originalSize * factor, 48.0);
@@ -225,7 +226,7 @@ void MainWindow::applyZoomStyleSheet() {
         lastPos = m.capturedEnd();
     }
 
-    result += baseStyleSheet_.mid(lastPos);
+    result += originalStyleSheet_.mid(lastPos);
     qApp->setStyleSheet(result);
 }
 
@@ -245,24 +246,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         toggleFullscreen();
         event->accept();
         return;
-    }
-
-    if (event->modifiers() & Qt::ControlModifier) {
-        if (event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) {
-            zoomIn();
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_Minus || event->key() == Qt::Key_Underscore) {
-            zoomOut();
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_0) {
-            zoomReset();
-            event->accept();
-            return;
-        }
     }
 
     QMainWindow::keyPressEvent(event);
@@ -361,6 +344,7 @@ void MainWindow::onMessageReceived(QJsonObject message) {
 
     if (type == "chat") {
         QString from = message["from"].toString();
+        QString to = message["to"].toString();
         QString content = message["content"].toString();
         QString time;
         if (message.contains("timestamp")) {
@@ -370,7 +354,11 @@ void MainWindow::onMessageReceived(QJsonObject message) {
             time = QDateTime::currentDateTime().toString("hh:mm");
         }
 
-        if (currentChat_ == from && chatPages_.contains(from)) {
+        if (from == client_->username()) {
+            ensureChatPage(to);
+            ensureUserItem(to);
+            addChatMessage(from, content, time, MessageWidget::Right, to);
+        } else if (currentChat_ == from && chatPages_.contains(from)) {
             addChatMessage(from, content, time, MessageWidget::Left, from);
         } else {
             pendingMessages_[from].append(message);
@@ -379,7 +367,6 @@ void MainWindow::onMessageReceived(QJsonObject message) {
                 chatStack_->addWidget(page);
                 chatPages_[from] = page;
             }
-
             ensureUserItem(from);
             incrementUnread(from);
         }
@@ -437,6 +424,7 @@ void MainWindow::addChatMessage(const QString &username, const QString &content,
 
 void MainWindow::updateBaseStyleSheet() {
     baseStyleSheet_ = qApp->styleSheet();
+    originalStyleSheet_ = baseStyleSheet_;
 }
 
 void MainWindow::onSystemMessage(const QString &content) {

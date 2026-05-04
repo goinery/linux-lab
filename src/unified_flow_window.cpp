@@ -227,22 +227,6 @@ void UnifiedFlowWindow::onToggleTheme() {
     applyTheme();
 }
 
-void UnifiedFlowWindow::onToggleFullscreen() {
-    if (maximized_) {
-        setGeometry(normalGeometry_);
-        maximized_ = false;
-        if (maximizeBtn_) maximizeBtn_->setText("□");
-    } else {
-        normalGeometry_ = geometry();
-        QScreen *screen = QGuiApplication::primaryScreen();
-        if (screen) {
-            setGeometry(screen->geometry());
-        }
-        maximized_ = true;
-        if (maximizeBtn_) maximizeBtn_->setText("⊞");
-    }
-}
-
 void UnifiedFlowWindow::onWinMinimize() { showMinimized(); }
 
 void UnifiedFlowWindow::onWinMaxRestore() {

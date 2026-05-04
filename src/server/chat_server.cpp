@@ -139,6 +139,7 @@ void ChatServer::onClientDisconnected(qintptr socketDescriptor) {
         }
         handler->deleteLater();
     }
+    locker.unlock();
     emitStats();
 }
 
@@ -342,5 +343,6 @@ void ChatServer::emitStats() {
     } else {
         uptime = QString("%1秒").arg(s);
     }
-    emit serverStatsUpdated(totalConnections_, totalMessages_, uptime);
+    QMutexLocker locker(&clientsMutex_);
+    emit serverStatsUpdated(clients_.size(), totalMessages_, uptime);
 }
