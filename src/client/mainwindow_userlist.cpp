@@ -33,22 +33,6 @@ void MainWindow::setupMenuBar() {
 
     viewMenu->addSeparator();
 
-    QAction *zoomInAction = viewMenu->addAction("放大(&I)");
-    zoomInAction->setShortcuts({QKeySequence::ZoomIn, QKeySequence("Ctrl+="),
-                                 QKeySequence("Ctrl++")});
-    zoomInAction->setShortcutContext(Qt::ApplicationShortcut);
-    connect(zoomInAction, &QAction::triggered, this, &MainWindow::zoomIn);
-
-    QAction *zoomOutAction = viewMenu->addAction("缩小(&O)");
-    zoomOutAction->setShortcuts({QKeySequence::ZoomOut, QKeySequence("Ctrl+-")});
-    zoomOutAction->setShortcutContext(Qt::ApplicationShortcut);
-    connect(zoomOutAction, &QAction::triggered, this, &MainWindow::zoomOut);
-
-    QAction *zoomResetAction = viewMenu->addAction("重置缩放(&R)");
-    zoomResetAction->setShortcut(QKeySequence("Ctrl+0"));
-    zoomResetAction->setShortcutContext(Qt::ApplicationShortcut);
-    connect(zoomResetAction, &QAction::triggered, this, &MainWindow::zoomReset);
-
     QMenu *helpMenu = menuBar()->addMenu("帮助(&H)");
     QAction *aboutAction = helpMenu->addAction("关于(&A)");
     connect(aboutAction, &QAction::triggered, this, [this]() {

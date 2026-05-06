@@ -23,15 +23,6 @@ class MainWindow : public QMainWindow {
 
 public:
     explicit MainWindow(ChatClient *client, QWidget *parent = nullptr);
-    void updateBaseStyleSheet();
-    int zoomLevel() const { return zoomLevel_; }
-    void zoomIn();
-    void zoomOut();
-    void zoomReset();
-
-signals:
-    void zoomChanged(int level);
-
 protected:
     void keyPressEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -59,9 +50,7 @@ private:
     void updateUnreadBadge(const QString &chatName, int count);
     QWidget *createChatPage(const QString &name);
     void flushPendingMessagesForChat(const QString &chatName);
-    void applyZoomStyleSheet();
     void updateBubbleMaxWidth();
-    void updateZoomLabel();
     QListWidgetItem *findUserItem(const QString &chatName) const;
     QListWidgetItem *ensureUserItem(const QString &chatName);
     void refreshUserItemVisual(const QString &chatName);
@@ -72,7 +61,6 @@ private:
 
     ChatClient *client_;
     QString currentChat_;
-    int zoomLevel_;
 
     QWidget *centralWidget_;
     QHBoxLayout *mainLayout_;
@@ -89,10 +77,7 @@ private:
     QTextEdit *inputEdit_;
     QPushButton *sendButton_;
     QLabel *chatTitleLabel_;
-    QLabel *zoomLabel_;
     QLabel *statusLabel_;
-    QString baseStyleSheet_;
-    QString originalStyleSheet_;
 };
 
 #endif

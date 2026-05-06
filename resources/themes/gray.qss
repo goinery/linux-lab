@@ -70,11 +70,6 @@ QMainWindow {
     color: #333333;
 }
 
-#zoomLevelSideLabel {
-    color: #999999;
-    font-size: 12px;
-}
-
 #disconnectSideBtn {
     color: #d9534f;
     border: none;

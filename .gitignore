@@ -1,7 +1,9 @@
-# Build output
-build/
 .trae/
 .claude/
+CLAUDE.md
+
+# Build output
+build/
 bin/
 *.o
 *.obj

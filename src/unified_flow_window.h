@@ -57,8 +57,6 @@ private:
     };
 
     QWidget *cardWidget(const QString &title);
-    void updateZoomSideLabel();
-    void installZoomLabelEventFilter(QLabel *label);
     void stopServerIfRunning();
     void buildUi(const QString &defaultHost, quint16 defaultPort,
                  bool defaultServerMode);
@@ -109,7 +107,6 @@ private:
     QPushButton *themeButton_;
     QPushButton *maximizeBtn_;
     QWidget *titleBar_;
-    QLabel *zoomLevelSideLabel_;
     QPushButton *disconnectSideBtn_;
 
     ChatClient *client_;

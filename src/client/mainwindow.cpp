@@ -12,12 +12,10 @@
 #include <QStatusBar>
 #include <QResizeEvent>
 #include <QKeyEvent>
-#include <QRegularExpression>
 #include <QTimer>
-#include <QInputDialog>
 
 MainWindow::MainWindow(ChatClient *client, QWidget *parent)
-    : QMainWindow(parent), client_(client), currentChat_("general"), zoomLevel_(100) {
+    : QMainWindow(parent), client_(client), currentChat_("general") {
     setWindowTitle(Constants::APP_NAME + " " + Constants::APP_VERSION);
     setMinimumSize(640, 480);
     resize(1000, 700);
@@ -50,8 +48,6 @@ MainWindow::MainWindow(ChatClient *client, QWidget *parent)
         client_->sendMessage(Protocol::createUserListRequest());
     }
 
-    baseStyleSheet_ = qApp->styleSheet();
-    originalStyleSheet_ = baseStyleSheet_;
 }
 
 void MainWindow::setupUI() {
@@ -152,29 +148,11 @@ void MainWindow::setupShortcuts() {
     QShortcut *sendShortcut = new QShortcut(QKeySequence("Ctrl+Return"), this);
     sendShortcut->setContext(Qt::ApplicationShortcut);
     connect(sendShortcut, &QShortcut::activated, this, &MainWindow::onSendClicked);
-
-    QShortcut *zoomInShortcut = new QShortcut(QKeySequence::ZoomIn, this);
-    zoomInShortcut->setContext(Qt::ApplicationShortcut);
-    connect(zoomInShortcut, &QShortcut::activated, this, &MainWindow::zoomIn);
-
-    QShortcut *zoomOutShortcut = new QShortcut(QKeySequence::ZoomOut, this);
-    zoomOutShortcut->setContext(Qt::ApplicationShortcut);
-    connect(zoomOutShortcut, &QShortcut::activated, this, &MainWindow::zoomOut);
-
-    QShortcut *zoomResetShortcut = new QShortcut(QKeySequence("Ctrl+0"), this);
-    zoomResetShortcut->setContext(Qt::ApplicationShortcut);
-    connect(zoomResetShortcut, &QShortcut::activated, this, &MainWindow::zoomReset);
 }
 
 void MainWindow::setupStatusBar() {
     statusLabel_ = new QLabel("正在连接服务器...");
-    zoomLabel_ = new QLabel("100%");
-    zoomLabel_->setCursor(Qt::PointingHandCursor);
-    zoomLabel_->setToolTip("双击输入自定义缩放比例");
-    zoomLabel_->installEventFilter(this);
-
     statusBar()->addWidget(statusLabel_, 1);
-    statusBar()->addPermanentWidget(zoomLabel_);
 }
 
 void MainWindow::toggleFullscreen() {
@@ -183,56 +161,6 @@ void MainWindow::toggleFullscreen() {
     } else {
         showFullScreen();
     }
-}
-
-void MainWindow::zoomIn() {
-    if (zoomLevel_ >= 200) return;
-    zoomLevel_ += 10;
-    updateZoomLabel();
-}
-
-void MainWindow::zoomOut() {
-    if (zoomLevel_ <= 50) return;
-    zoomLevel_ -= 10;
-    updateZoomLabel();
-}
-
-void MainWindow::zoomReset() {
-    zoomLevel_ = 100;
-    updateZoomLabel();
-}
-
-void MainWindow::updateZoomLabel() {
-    zoomLabel_->setText(QString::number(zoomLevel_) + "%");
-    applyZoomStyleSheet();
-    updateBubbleMaxWidth();
-    emit zoomChanged(zoomLevel_);
-}
-
-void MainWindow::applyZoomStyleSheet() {
-    if (originalStyleSheet_.isEmpty()) {
-        return;
-    }
-
-    const qreal factor = zoomLevel_ / 100.0;
-    QRegularExpression re("font-size\\s*:\\s*(\\d+(?:\\.\\d+)?)px");
-    QString result;
-    int lastPos = 0;
-
-    QRegularExpressionMatchIterator it = re.globalMatch(originalStyleSheet_);
-    while (it.hasNext()) {
-        QRegularExpressionMatch m = it.next();
-        result += originalStyleSheet_.mid(lastPos, m.capturedStart() - lastPos);
-
-        const qreal originalSize = m.captured(1).toDouble();
-        const qreal scaledSize = qBound(8.0, originalSize * factor, 48.0);
-        result += QString("font-size: %1px").arg(QString::number(scaledSize, 'f', 1));
-        lastPos = m.capturedEnd();
-    }
-
-    result += originalStyleSheet_.mid(lastPos);
-    qApp->setStyleSheet("");
-    qApp->setStyleSheet(result);
 }
 
 void MainWindow::updateBubbleMaxWidth() {
@@ -259,16 +187,6 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
-    if (obj == zoomLabel_ && event->type() == QEvent::MouseButtonDblClick) {
-        bool ok;
-        int val = QInputDialog::getInt(this, "缩放比例", "输入缩放比例 (50-200):",
-                                       zoomLevel_, 50, 200, 10, &ok);
-        if (ok) {
-            zoomLevel_ = val;
-            updateZoomLabel();
-        }
-        return true;
-    }
     return QMainWindow::eventFilter(obj, event);
 }
 
@@ -433,11 +351,6 @@ void MainWindow::addChatMessage(const QString &username, const QString &content,
         QScrollBar *bar = scrollArea->verticalScrollBar();
         QTimer::singleShot(50, this, [bar]() { bar->setValue(bar->maximum()); });
     }
-}
-
-void MainWindow::updateBaseStyleSheet() {
-    baseStyleSheet_ = qApp->styleSheet();
-    originalStyleSheet_ = baseStyleSheet_;
 }
 
 void MainWindow::onSystemMessage(const QString &content) {

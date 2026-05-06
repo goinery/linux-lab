@@ -196,11 +196,6 @@ void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
                 chatPage_ = new MainWindow(client_, this);
                 chatPage_->setObjectName("embeddedChatPage");
                 pages_->addWidget(chatPage_);
-                connect(chatPage_, &MainWindow::zoomChanged, this, [this](int level) {
-                    if (zoomLevelSideLabel_) {
-                        zoomLevelSideLabel_->setText(QString::number(level) + "%");
-                    }
-                });
             }
             setCurrentPage(chatPage_, "聊天室");
         } else {
@@ -297,17 +292,6 @@ QWidget *UnifiedFlowWindow::cardWidget(const QString &title) {
     return card;
 }
 
-void UnifiedFlowWindow::updateZoomSideLabel() {
-    if (zoomLevelSideLabel_ && chatPage_) {
-        zoomLevelSideLabel_->setText(QString::number(chatPage_->zoomLevel()) + "%");
-    }
-}
-
-void UnifiedFlowWindow::installZoomLabelEventFilter(QLabel *label) {
-    zoomLevelSideLabel_ = label;
-    label->installEventFilter(this);
-}
-
 void UnifiedFlowWindow::stopServerIfRunning() {
     if (server_ != nullptr) {
         server_->stop();
@@ -338,16 +322,6 @@ void UnifiedFlowWindow::resizeEvent(QResizeEvent *event) {
 }
 
 bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
-    if (obj == zoomLevelSideLabel_) {
-        if (event->type() == QEvent::MouseButtonDblClick) {
-            if (chatPage_) {
-                chatPage_->zoomReset();
-                updateZoomSideLabel();
-            }
-            return true;
-        }
-    }
-
     if (obj == titleBar_) {
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
@@ -452,10 +426,6 @@ void UnifiedFlowWindow::applyTheme() {
     } else {
         qWarning() << "Failed to load theme qss:" << themePath;
         qApp->setStyleSheet(":root {}");
-    }
-
-    if (chatPage_) {
-        chatPage_->updateBaseStyleSheet();
     }
 
     if (themeButton_) {

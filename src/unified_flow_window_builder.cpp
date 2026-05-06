@@ -105,53 +105,6 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
 
     sideLayout->addSpacing(12);
 
-    QWidget *zoomPanel = new QWidget;
-    zoomPanel->setFixedWidth(56);
-    QVBoxLayout *zpLayout = new QVBoxLayout(zoomPanel);
-    zpLayout->setContentsMargins(0, 0, 0, 0);
-    zpLayout->setSpacing(2);
-
-    QPushButton *zoomInSideBtn = new QPushButton("+");
-    zoomInSideBtn->setObjectName("sideBarBtn");
-    zoomInSideBtn->setToolTip("放大 (Ctrl++)");
-    zoomInSideBtn->setCursor(Qt::PointingHandCursor);
-    zoomInSideBtn->setFixedSize(56, 30);
-
-    QLabel *zoomLevelSideLabel = new QLabel("100%");
-    zoomLevelSideLabel->setAlignment(Qt::AlignCenter);
-    zoomLevelSideLabel->setObjectName("zoomLevelSideLabel");
-    zoomLevelSideLabel->setFixedHeight(24);
-    zoomLevelSideLabel->setCursor(Qt::PointingHandCursor);
-
-    QPushButton *zoomOutSideBtn = new QPushButton("−");
-    zoomOutSideBtn->setObjectName("sideBarBtn");
-    zoomOutSideBtn->setToolTip("缩小 (Ctrl+-)");
-    zoomOutSideBtn->setCursor(Qt::PointingHandCursor);
-    zoomOutSideBtn->setFixedSize(56, 30);
-
-    zpLayout->addWidget(zoomInSideBtn, 0, Qt::AlignHCenter);
-    zpLayout->addWidget(zoomLevelSideLabel);
-    zpLayout->addWidget(zoomOutSideBtn, 0, Qt::AlignHCenter);
-
-    sideLayout->addWidget(zoomPanel);
-
-    connect(zoomInSideBtn, &QPushButton::clicked, this, [this]() {
-        if (chatPage_) {
-            chatPage_->zoomIn();
-            updateZoomSideLabel();
-        }
-    });
-    connect(zoomOutSideBtn, &QPushButton::clicked, this, [this]() {
-        if (chatPage_) {
-            chatPage_->zoomOut();
-            updateZoomSideLabel();
-        }
-    });
-
-    installZoomLabelEventFilter(zoomLevelSideLabel);
-
-    sideLayout->addSpacing(6);
-
     disconnectSideBtn_ = new QPushButton("✕");
     disconnectSideBtn_->setObjectName("sideBarBtn");
     disconnectSideBtn_->setToolTip("断开连接 (Ctrl+D)");
