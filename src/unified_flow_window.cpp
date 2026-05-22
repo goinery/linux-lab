@@ -1,4 +1,5 @@
 #include "unified_flow_window.h"
+#include "theme_manager.h"
 
 #include <QApplication>
 #include <QDir>
@@ -218,7 +219,7 @@ void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
 }
 
 void UnifiedFlowWindow::onToggleTheme() {
-    setTheme((themeIndex_ + 1) % 4);
+    setTheme((themeIndex_ + 1) % ThemeManager::themeCount());
 }
 
 void UnifiedFlowWindow::setTheme(int index) {
@@ -406,29 +407,16 @@ void UnifiedFlowWindow::centerToHalfScreen() {
 }
 
 void UnifiedFlowWindow::applyTheme() {
-    QString themePath = ":/theme_gray.qss";
-    QString themeName = "素白";
-    if (themeIndex_ == 1) {
-        themePath = ":/theme_mint.qss";
-        themeName = "森氧";
-    } else if (themeIndex_ == 2) {
-        themePath = ":/theme_sky.qss";
-        themeName = "云海";
-    } else if (themeIndex_ == 3) {
-        themePath = ":/theme_night.qss";
-        themeName = "夜航";
-    }
-
-    QFile styleFile(themePath);
-    if (styleFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qApp->setStyleSheet(QString::fromUtf8(styleFile.readAll()));
-        styleFile.close();
+    const auto &palette = ThemeManager::paletteAt(themeIndex_);
+    const QString styleSheet = ThemeManager::render(palette);
+    if (styleSheet.isEmpty()) {
+        qWarning() << "Failed to render theme:" << palette.id;
+        qApp->setStyleSheet(QString());
     } else {
-        qWarning() << "Failed to load theme qss:" << themePath;
-        qApp->setStyleSheet(":root {}");
+        qApp->setStyleSheet(styleSheet);
     }
 
     if (themeButton_) {
-        themeButton_->setToolTip("主题: " + themeName + " (点击选择)");
+        themeButton_->setToolTip("主题: " + palette.name + " (点击选择)");
     }
 }
