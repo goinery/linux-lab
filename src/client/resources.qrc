@@ -1,10 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file alias="style.qss">../../resources/style.qss</file>
-        <file alias="theme_gray.qss">../../resources/themes/gray.qss</file>
-        <file alias="theme_mint.qss">../../resources/themes/mint.qss</file>
-        <file alias="theme_sky.qss">../../resources/themes/sky.qss</file>
-        <file alias="theme_night.qss">../../resources/themes/night.qss</file>
         <file alias="theme_template.qss">../../resources/themes/template.qss</file>
     </qresource>
 </RCC>
