@@ -183,9 +183,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
 void MainWindow::resizeEvent(QResizeEvent *event) {
     QMainWindow::resizeEvent(event);
-    if (isWindow()) {
-        resize(qMax(width(), 640), qMax(height(), 480));
-    }
     updateBubbleMaxWidth();
 }
 

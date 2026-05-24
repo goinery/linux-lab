@@ -321,7 +321,6 @@ void UnifiedFlowWindow::changeEvent(QEvent *event) {
 
 void UnifiedFlowWindow::resizeEvent(QResizeEvent *event) {
     QMainWindow::resizeEvent(event);
-    resize(qMax(width(), 800), qMax(height(), 540));
 }
 
 bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
