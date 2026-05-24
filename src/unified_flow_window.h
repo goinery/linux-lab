@@ -63,6 +63,7 @@ private:
     void setCurrentPage(QWidget *page, const QString &subtitle);
     Qt::Edges calcEdge(const QPoint &pos, const QSize &sz) const;
     void setEdgeCursor(Qt::Edges e);
+    QRect resizedGeometry(const QPoint &globalPos) const;
 
     QStackedWidget *pages_;
     QWidget *startupPage_;
@@ -117,9 +118,13 @@ private:
     QString pendingHost_;
     quint16 pendingPort_;
     bool dragging_;
+    bool resizing_;
     bool maximized_;
     QPoint dragStartPos_;
+    QPoint resizeStartPos_;
+    Qt::Edges resizeEdges_;
     QRect normalGeometry_;
+    QRect resizeStartGeometry_;
 };
 
 #endif

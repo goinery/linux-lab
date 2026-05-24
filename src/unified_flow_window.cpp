@@ -30,7 +30,8 @@ UnifiedFlowWindow::UnifiedFlowWindow(const QString &defaultHost, quint16 default
                                      bool defaultServerMode, QWidget *parent)
     : QMainWindow(parent), client_(new ChatClient(this)), server_(nullptr),
       chatPage_(nullptr), themeIndex_(0), pendingAuthType_(None),
-      dragging_(false), maximized_(false) {
+      dragging_(false), resizing_(false), maximized_(false),
+      resizeEdges_(Qt::Edges()) {
     setWindowTitle(Constants::APP_NAME + " " + Constants::APP_VERSION);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint | Qt::Window);
     setAttribute(Qt::WA_InputMethodEnabled, true);
@@ -361,11 +362,18 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
             const QPoint local = mapFromGlobal(me->globalPos());
             if (event->type() == QEvent::MouseMove) {
+                if (resizing_) {
+                    setGeometry(resizedGeometry(me->globalPos()));
+                    return true;
+                }
                 setEdgeCursor(calcEdge(local, size()));
             } else if (me->button() == Qt::LeftButton) {
                 Qt::Edges e = calcEdge(local, size());
-                if (e != 0 && windowHandle()) {
-                    windowHandle()->startSystemResize(e);
+                if (e != 0) {
+                    resizeEdges_ = e;
+                    resizeStartPos_ = me->globalPos();
+                    resizeStartGeometry_ = geometry();
+                    resizing_ = true;
                     return true;
                 }
             }
@@ -374,6 +382,8 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
 
     if (event->type() == QEvent::MouseButtonRelease) {
         dragging_ = false;
+        resizing_ = false;
+        resizeEdges_ = Qt::Edges();
     }
 
     return QMainWindow::eventFilter(obj, event);
@@ -402,6 +412,30 @@ void UnifiedFlowWindow::setEdgeCursor(Qt::Edges e) {
         setCursor(cm.sizeBDiag()); break;
     default: setCursor(cm.arrow()); break;
     }
+}
+
+QRect UnifiedFlowWindow::resizedGeometry(const QPoint &globalPos) const {
+    QRect rect = resizeStartGeometry_;
+    const QPoint delta = globalPos - resizeStartPos_;
+    const int minW = minimumWidth();
+    const int minH = minimumHeight();
+
+    if (resizeEdges_ & Qt::LeftEdge) {
+        const int maxLeft = resizeStartGeometry_.right() - minW + 1;
+        rect.setLeft(qMin(resizeStartGeometry_.left() + delta.x(), maxLeft));
+    }
+    if (resizeEdges_ & Qt::RightEdge) {
+        rect.setRight(qMax(resizeStartGeometry_.right() + delta.x(), rect.left() + minW - 1));
+    }
+    if (resizeEdges_ & Qt::TopEdge) {
+        const int maxTop = resizeStartGeometry_.bottom() - minH + 1;
+        rect.setTop(qMin(resizeStartGeometry_.top() + delta.y(), maxTop));
+    }
+    if (resizeEdges_ & Qt::BottomEdge) {
+        rect.setBottom(qMax(resizeStartGeometry_.bottom() + delta.y(), rect.top() + minH - 1));
+    }
+
+    return rect;
 }
 
 void UnifiedFlowWindow::centerToHalfScreen() {
