@@ -29,7 +29,7 @@
 UnifiedFlowWindow::UnifiedFlowWindow(const QString &defaultHost, quint16 defaultPort,
                                      bool defaultServerMode, QWidget *parent)
     : QMainWindow(parent), client_(new ChatClient(this)), server_(nullptr),
-      chatPage_(nullptr), themeIndex_(0), pendingAuthType_(None),
+      chatPage_(nullptr), themeIndex_(3), pendingAuthType_(None),
       dragging_(false), resizing_(false), maximized_(false),
       resizeEdges_(Qt::Edges()) {
     setWindowTitle(Constants::APP_NAME + " " + Constants::APP_VERSION);
