@@ -114,6 +114,7 @@ void MainWindow::setupUI() {
     inputEdit_->setMaximumHeight(120);
     inputEdit_->setPlaceholderText("输入消息... (Ctrl+Enter 发送)");
     inputEdit_->setCursor(CursorManager::instance().ibeam());
+    inputEdit_->viewport()->setCursor(CursorManager::instance().ibeam());
     inputEdit_->setAcceptRichText(false);
     inputEdit_->setAttribute(Qt::WA_InputMethodEnabled, true);
     inputEdit_->setInputMethodHints(Qt::ImhNone);
