@@ -75,6 +75,11 @@ QMainWindow, #rootWidget {
     border-radius: 10px;
     font-size: 16px;
     color: @textSideBtn@;
+    padding: 4px;
+}
+QPushButton#sideBarBtn::menu-indicator {
+    image: none;
+    width: 0px;
 }
 #sideBarBtn:hover {
     background: @bgSideBtnHover@;
