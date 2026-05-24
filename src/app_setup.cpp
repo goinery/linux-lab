@@ -11,6 +11,7 @@
 #include <QWindow>
 
 #include "constants.h"
+#include "cursor_manager.h"
 #include "unified_flow_window.h"
 
 static QStringList preferredCjkFamilies() {
@@ -160,6 +161,9 @@ int runApp(int argc, char *argv[]) {
     QApplication::setApplicationName(Constants::APP_NAME);
     QApplication::setApplicationVersion(Constants::APP_VERSION);
     const QString selectedFontFamily = configureClientFont(app);
+
+    // 初始化自定义光标（从 PNG 资源加载，回退到 Qt 内置光标）
+    CursorManager::instance().initialize();
 
     QCommandLineParser parser;
     parser.setApplicationDescription("ChatRoom");

@@ -1,4 +1,5 @@
 #include "login_dialog.h"
+#include "cursor_manager.h"
 #include "chat_client.h"
 #include "protocol.h"
 
@@ -58,7 +59,7 @@ void LoginDialog::setupUI() {
         loginButton_ = new QPushButton("登 录");
         loginButton_->setObjectName("primaryButton");
         loginButton_->setMinimumHeight(48);
-        loginButton_->setCursor(Qt::PointingHandCursor);
+        loginButton_->setCursor(CursorManager::instance().hand());
 
         loginStatusLabel_ = new QLabel;
         loginStatusLabel_->setObjectName("statusLabel");
@@ -68,7 +69,7 @@ void LoginDialog::setupUI() {
 
         switchToRegisterButton_ = new QPushButton("还没有账号？点击注册");
         switchToRegisterButton_->setObjectName("linkButton");
-        switchToRegisterButton_->setCursor(Qt::PointingHandCursor);
+        switchToRegisterButton_->setCursor(CursorManager::instance().hand());
         switchToRegisterButton_->setFlat(true);
 
         layout->addWidget(titleLabel);
@@ -109,7 +110,7 @@ void LoginDialog::setupUI() {
         registerButton_ = new QPushButton("注 册");
         registerButton_->setObjectName("primaryButton");
         registerButton_->setMinimumHeight(48);
-        registerButton_->setCursor(Qt::PointingHandCursor);
+        registerButton_->setCursor(CursorManager::instance().hand());
 
         regStatusLabel_ = new QLabel;
         regStatusLabel_->setObjectName("statusLabel");
@@ -119,7 +120,7 @@ void LoginDialog::setupUI() {
 
         switchToLoginButton_ = new QPushButton("已有账号？点击登录");
         switchToLoginButton_->setObjectName("linkButton");
-        switchToLoginButton_->setCursor(Qt::PointingHandCursor);
+        switchToLoginButton_->setCursor(CursorManager::instance().hand());
         switchToLoginButton_->setFlat(true);
 
         layout->addWidget(titleLabel);

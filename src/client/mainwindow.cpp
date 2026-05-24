@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "cursor_manager.h"
 #include "message_widget.h"
 #include "protocol.h"
 #include "constants.h"
@@ -120,7 +121,7 @@ void MainWindow::setupUI() {
     sendButton_ = new QPushButton("发 送");
     sendButton_->setObjectName("sendButton");
     sendButton_->setMinimumSize(80, 50);
-    sendButton_->setCursor(Qt::PointingHandCursor);
+    sendButton_->setCursor(CursorManager::instance().hand());
 
     inputLayout->addWidget(inputEdit_, 1);
     inputLayout->addWidget(sendButton_);

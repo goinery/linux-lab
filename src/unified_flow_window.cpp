@@ -1,4 +1,5 @@
 #include "unified_flow_window.h"
+#include "cursor_manager.h"
 #include "theme_manager.h"
 
 #include <QApplication>
@@ -379,16 +380,17 @@ Qt::Edges UnifiedFlowWindow::calcEdge(const QPoint &pos, const QSize &sz) const 
 }
 
 void UnifiedFlowWindow::setEdgeCursor(Qt::Edges e) {
+    auto &cm = CursorManager::instance();
     switch (e) {
     case Qt::LeftEdge: case Qt::RightEdge:
-        setCursor(Qt::SizeHorCursor); break;
+        setCursor(cm.sizeHor()); break;
     case Qt::TopEdge: case Qt::BottomEdge:
-        setCursor(Qt::SizeVerCursor); break;
+        setCursor(cm.sizeVer()); break;
     case Qt::LeftEdge | Qt::TopEdge: case Qt::RightEdge | Qt::BottomEdge:
-        setCursor(Qt::SizeFDiagCursor); break;
+        setCursor(cm.sizeFDiag()); break;
     case Qt::LeftEdge | Qt::BottomEdge: case Qt::RightEdge | Qt::TopEdge:
-        setCursor(Qt::SizeBDiagCursor); break;
-    default: setCursor(Qt::ArrowCursor); break;
+        setCursor(cm.sizeBDiag()); break;
+    default: setCursor(cm.arrow()); break;
     }
 }
 

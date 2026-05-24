@@ -13,6 +13,7 @@
 #include "chat_client.h"
 #include "chat_server.h"
 #include "constants.h"
+#include "cursor_manager.h"
 #include "mainwindow.h"
 
 void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
@@ -49,7 +50,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         btn->setObjectName(objName);
         btn->setToolTip(tip);
         btn->setFixedSize(34, 26);
-        btn->setCursor(Qt::PointingHandCursor);
+        btn->setCursor(CursorManager::instance().hand());
         connect(btn, &QPushButton::clicked, this, fn);
         tbLayout->addWidget(btn);
         return btn;
@@ -78,7 +79,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         QPushButton *btn = new QPushButton(icon);
         btn->setObjectName("sideBarBtn");
         btn->setToolTip(tip);
-        btn->setCursor(Qt::PointingHandCursor);
+        btn->setCursor(CursorManager::instance().hand());
         btn->setFixedSize(56, 40);
         connect(btn, &QPushButton::clicked, this, fn);
         sideLayout->addWidget(btn, 0, Qt::AlignHCenter);
@@ -108,7 +109,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     disconnectSideBtn_ = new QPushButton("✕");
     disconnectSideBtn_->setObjectName("sideBarBtn");
     disconnectSideBtn_->setToolTip("断开连接 (Ctrl+D)");
-    disconnectSideBtn_->setCursor(Qt::PointingHandCursor);
+    disconnectSideBtn_->setCursor(CursorManager::instance().hand());
     disconnectSideBtn_->setFixedSize(56, 40);
     connect(disconnectSideBtn_, &QPushButton::clicked, this, [this]() {
         if (client_->isConnected()) client_->permanentDisconnect();
@@ -268,9 +269,9 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         onlineActions->setSpacing(6);
         muteButton_ = new QPushButton("禁言选中");
         muteButton_->setObjectName("primaryButton");
-        muteButton_->setCursor(Qt::PointingHandCursor);
+        muteButton_->setCursor(CursorManager::instance().hand());
         unmuteButton_ = new QPushButton("解除禁言");
-        unmuteButton_->setCursor(Qt::PointingHandCursor);
+        unmuteButton_->setCursor(CursorManager::instance().hand());
         onlineActions->addWidget(muteButton_);
         onlineActions->addWidget(unmuteButton_);
         onlineActions->addStretch();
@@ -285,7 +286,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         serverBroadcastEdit_->setPlaceholderText("输入公告内容...");
         QPushButton *broadcastButton = new QPushButton("发送公告");
         broadcastButton->setObjectName("primaryButton");
-        broadcastButton->setCursor(Qt::PointingHandCursor);
+        broadcastButton->setCursor(CursorManager::instance().hand());
         broadcastRow->addWidget(serverBroadcastEdit_, 1);
         broadcastRow->addWidget(broadcastButton);
 
