@@ -29,6 +29,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     titleBar_ = new QWidget;
     titleBar_->setObjectName("titleBar");
     titleBar_->setFixedHeight(36);
+    titleBar_->setCursor(CursorManager::instance().move());
     QHBoxLayout *tbLayout = new QHBoxLayout(titleBar_);
     tbLayout->setContentsMargins(12, 0, 4, 0);
     tbLayout->setSpacing(8);
@@ -37,10 +38,12 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     tbIcon->setObjectName("titleBarIcon");
     tbIcon->setFixedSize(26, 26);
     tbIcon->setAlignment(Qt::AlignCenter);
+    tbIcon->setCursor(CursorManager::instance().move());
     tbLayout->addWidget(tbIcon);
 
     QLabel *tbTitle = new QLabel(Constants::APP_NAME);
     tbTitle->setObjectName("titleBarLabel");
+    tbTitle->setCursor(CursorManager::instance().move());
     tbLayout->addWidget(tbTitle);
     tbLayout->addStretch();
 
@@ -98,6 +101,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     themeButton_ = themeSideBtn;
 
     QMenu *themeMenu = new QMenu(themeButton_);
+    themeMenu->setCursor(CursorManager::instance().hand());
     themeMenu->addAction("素白", this, [this]() { setTheme(0); });
     themeMenu->addAction("森氧", this, [this]() { setTheme(1); });
     themeMenu->addAction("云海", this, [this]() { setTheme(2); });

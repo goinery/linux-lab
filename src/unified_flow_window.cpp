@@ -3,6 +3,7 @@
 #include "theme_manager.h"
 
 #include <QApplication>
+#include <QAbstractButton>
 #include <QDir>
 #include <QFile>
 #include <QFont>
@@ -324,20 +325,31 @@ void UnifiedFlowWindow::resizeEvent(QResizeEvent *event) {
 }
 
 bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
-    if (obj == titleBar_) {
+    QWidget *w = qobject_cast<QWidget *>(obj);
+    const bool inTitleBar = titleBar_ != nullptr
+        && w != nullptr
+        && (w == titleBar_ || titleBar_->isAncestorOf(w));
+    const bool titleBarAction = inTitleBar && qobject_cast<QAbstractButton *>(w) == nullptr;
+
+    if (titleBarAction) {
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
             if (me->button() == Qt::LeftButton) {
                 dragStartPos_ = me->globalPos() - frameGeometry().topLeft();
                 dragging_ = true;
+                titleBar_->setCursor(CursorManager::instance().move());
                 return true;
             }
-        } else if (event->type() == QEvent::MouseMove && dragging_) {
+        } else if (event->type() == QEvent::MouseMove) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
-            move(me->globalPos() - dragStartPos_);
+            titleBar_->setCursor(CursorManager::instance().move());
+            if (dragging_) {
+                move(me->globalPos() - dragStartPos_);
+            }
             return true;
         } else if (event->type() == QEvent::MouseButtonRelease) {
             dragging_ = false;
+            titleBar_->setCursor(CursorManager::instance().move());
             return true;
         } else if (event->type() == QEvent::MouseButtonDblClick) {
             onWinMaxRestore();
@@ -346,7 +358,6 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
     }
 
     if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress) {
-        QWidget *w = qobject_cast<QWidget *>(obj);
         if (w && !maximized_ && isAncestorOf(w)) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
             const QPoint local = mapFromGlobal(me->globalPos());
