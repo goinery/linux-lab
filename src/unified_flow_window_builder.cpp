@@ -128,6 +128,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
 
     sideBtn("?", "关于", [this]() {
         QMessageBox box(this);
+        box.setCursor(CursorManager::instance().arrow());
         box.setWindowTitle("关于 ChatRoom");
         box.setText("<h1 style='margin:0;color:#2d4a34;'>✦ ChatRoom v1.0</h1>");
         box.setInformativeText(
@@ -146,6 +147,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         if (okBtn) {
             okBtn->setText("知道了");
             okBtn->setMinimumWidth(100);
+            okBtn->setCursor(CursorManager::instance().arrow());
         }
 
         box.setStyleSheet(
@@ -213,6 +215,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         serverLayout->setContentsMargins(0, 0, 0, 0);
         QLabel *serverPortTitle = new QLabel("服务端口");
         serverPortEdit_ = new QLineEdit(QString::number(defaultPort));
+        serverPortEdit_->setCursor(CursorManager::instance().ibeam());
         serverLayout->addWidget(serverPortTitle);
         serverLayout->addWidget(serverPortEdit_);
 
@@ -223,6 +226,8 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         clientLayout->addWidget(new QLabel("服务端口"), 0, 1);
         clientHostEdit_ = new QLineEdit(defaultHost);
         clientPortEdit_ = new QLineEdit(QString::number(defaultPort));
+        clientHostEdit_->setCursor(CursorManager::instance().ibeam());
+        clientPortEdit_->setCursor(CursorManager::instance().ibeam());
         clientLayout->addWidget(clientHostEdit_, 1, 0);
         clientLayout->addWidget(clientPortEdit_, 1, 1);
 
@@ -288,6 +293,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         broadcastRow->setSpacing(6);
         serverBroadcastEdit_ = new QLineEdit;
         serverBroadcastEdit_->setPlaceholderText("输入公告内容...");
+        serverBroadcastEdit_->setCursor(CursorManager::instance().ibeam());
         QPushButton *broadcastButton = new QPushButton("发送公告");
         broadcastButton->setObjectName("primaryButton");
         broadcastButton->setCursor(CursorManager::instance().hand());
@@ -371,6 +377,8 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         loginLayout->addWidget(new QLabel("密码"), 0, 1);
         loginUserEdit_ = new QLineEdit;
         loginPassEdit_ = new QLineEdit;
+        loginUserEdit_->setCursor(CursorManager::instance().ibeam());
+        loginPassEdit_->setCursor(CursorManager::instance().ibeam());
         loginPassEdit_->setEchoMode(QLineEdit::Password);
         loginLayout->addWidget(loginUserEdit_, 1, 0);
         loginLayout->addWidget(loginPassEdit_, 1, 1);
@@ -383,6 +391,9 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         regUserEdit_ = new QLineEdit;
         regPassEdit_ = new QLineEdit;
         regConfirmEdit_ = new QLineEdit;
+        regUserEdit_->setCursor(CursorManager::instance().ibeam());
+        regPassEdit_->setCursor(CursorManager::instance().ibeam());
+        regConfirmEdit_->setCursor(CursorManager::instance().ibeam());
         regPassEdit_->setEchoMode(QLineEdit::Password);
         regConfirmEdit_->setEchoMode(QLineEdit::Password);
         regLayout->addWidget(regUserEdit_, 1, 0);

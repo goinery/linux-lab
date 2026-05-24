@@ -29,6 +29,7 @@ void LoginDialog::setupUI() {
         QLineEdit *edit = new QLineEdit;
         edit->setPlaceholderText(placeholder);
         edit->setMinimumHeight(44);
+        edit->setCursor(CursorManager::instance().ibeam());
         edit->setAttribute(Qt::WA_InputMethodEnabled, true);
         edit->setInputMethodHints(Qt::ImhNone);
         if (isPassword) edit->setEchoMode(QLineEdit::Password);
