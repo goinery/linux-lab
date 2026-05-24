@@ -10,6 +10,7 @@
         <file alias="cursor_size_ver.png">../../resources/cursors/cursor_size_ver.png</file>
         <file alias="cursor_size_fdiag.png">../../resources/cursors/cursor_size_fdiag.png</file>
         <file alias="cursor_size_bdiag.png">../../resources/cursors/cursor_size_bdiag.png</file>
+        <file alias="cursor_move..png">../../resources/cursors/cursor_move..png</file>
         <file alias="cursor_ibeam.png">../../resources/cursors/cursor_ibeam.png</file>
     </qresource>
 </RCC>

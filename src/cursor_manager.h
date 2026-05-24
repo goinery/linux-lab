@@ -14,13 +14,14 @@
  * 替换时请注意 hotspot（热点）坐标是否需要调整，可在 loadCursor() 调用中修改。
  *
  * 光标文件清单：
- *   cursor_arrow.png      → 默认箭头光标    (hotspot: 0,0)
- *   cursor_hand.png       → 手型光标(可点击) (hotspot: 9,6)
- *   cursor_size_hor.png   → 水平调整大小     (hotspot: 16,16)
- *   cursor_size_ver.png   → 垂直调整大小     (hotspot: 16,16)
- *   cursor_size_fdiag.png → ↘对角调整大小   (hotspot: 16,16)
- *   cursor_size_bdiag.png → ↗对角调整大小   (hotspot: 16,16)
- *   cursor_ibeam.png      → 文本选择光标     (hotspot: 16,16)
+ *   cursor_arrow.png      → 默认箭头光标    (hotspot: 20,14)
+ *   cursor_hand.png       → 手型光标(可点击) (hotspot: 27,11)
+ *   cursor_size_hor.png   → 水平调整大小     (hotspot: 32,31)
+ *   cursor_size_ver.png   → 垂直调整大小     (hotspot: 32,31)
+ *   cursor_size_fdiag.png → ↘对角调整大小   (hotspot: 32,31)
+ *   cursor_size_bdiag.png → ↗对角调整大小   (hotspot: 32,31)
+ *   cursor_move..png      → 移动窗口光标     (hotspot: 32,31)
+ *   cursor_ibeam.png      → 文本选择光标     (hotspot: 32,31)
  */
 class CursorManager {
 public:
@@ -37,6 +38,7 @@ public:
     const QCursor &sizeVer()    const;
     const QCursor &sizeFDiag()  const;
     const QCursor &sizeBDiag()  const;
+    const QCursor &move()       const;
     const QCursor &ibeam()      const;
 
 private:
@@ -56,6 +58,7 @@ private:
     QCursor sizeVerCursor_;
     QCursor sizeFDiagCursor_;
     QCursor sizeBDiagCursor_;
+    QCursor moveCursor_;
     QCursor ibeamCursor_;
 };
 
