@@ -51,6 +51,7 @@ private:
     QWidget *createChatPage(const QString &name);
     void flushPendingMessagesForChat(const QString &chatName);
     void updateBubbleMaxWidth();
+    int bubbleMaxWidthForChat(const QString &chatName) const;
     QListWidgetItem *findUserItem(const QString &chatName) const;
     QListWidgetItem *ensureUserItem(const QString &chatName);
     void refreshUserItemVisual(const QString &chatName);

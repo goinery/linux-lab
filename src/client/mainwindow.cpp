@@ -167,14 +167,24 @@ void MainWindow::toggleFullscreen() {
 }
 
 void MainWindow::updateBubbleMaxWidth() {
-    int maxWidth = qMax(250, int(width() * 0.55));
     for (auto it = chatPages_.begin(); it != chatPages_.end(); ++it) {
         QWidget *page = it.value();
+        int maxWidth = bubbleMaxWidthForChat(it.key());
         QList<MessageWidget *> msgs = page->findChildren<MessageWidget *>();
         for (MessageWidget *msg : msgs) {
             msg->updateWidth(maxWidth);
         }
     }
+}
+
+int MainWindow::bubbleMaxWidthForChat(const QString &chatName) const {
+    const QScrollArea *scrollArea = chatScrollAreas_.value(chatName, nullptr);
+    const int viewportWidth = scrollArea && scrollArea->viewport()
+        ? scrollArea->viewport()->width()
+        : qMax(320, width());
+    const int availableWidth = qMax(120, viewportWidth - 92);
+    const int preferredWidth = qMax(120, int(viewportWidth * 0.68));
+    return qBound(120, preferredWidth, availableWidth);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -342,7 +352,7 @@ void MainWindow::addChatMessage(const QString &username, const QString &content,
 
     QVBoxLayout *layout = chatLayouts_[chatName];
 
-    int maxWidth = qMax(250, int(width() * 0.55));
+    int maxWidth = bubbleMaxWidthForChat(chatName);
     MessageWidget *msgWidget = new MessageWidget(username, content, time, side, maxWidth);
     layout->addWidget(msgWidget);
 
