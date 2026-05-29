@@ -1,28 +1,12 @@
 #include "message_widget.h"
 #include <QFontMetrics>
-#include <QScrollBar>
-#include <QTextDocument>
-#include <QTextFrame>
-#include <QTextFrameFormat>
-#include <QTextOption>
-#include <QWheelEvent>
 #include <cmath>
 
 namespace {
 
-class BubbleTextEdit : public QTextEdit {
-public:
-    using QTextEdit::QTextEdit;
-
-    void resetViewportMargins() {
-        setViewportMargins(0, 0, 0, 0);
-    }
-
-protected:
-    void wheelEvent(QWheelEvent *event) override {
-        event->ignore();
-    }
-};
+constexpr int kBubbleHorizontalPadding = 14;
+constexpr int kBubbleVerticalPadding = 8;
+constexpr int kMinBubbleContentWidth = 32;
 
 }
 
@@ -61,24 +45,19 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     nameFont.setBold(true);
     nameLabel->setFont(nameFont);
 
-    bubbleEdit_ = new BubbleTextEdit;
-    bubbleEdit_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
-    bubbleEdit_->setReadOnly(true);
+    bubbleLabel_ = new QLabel;
+    bubbleLabel_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
     QString wrappedContent = content;
     while (wrappedContent.endsWith('\n')) {
         wrappedContent.chop(1);
     }
     contentText_ = wrappedContent;
-    bubbleEdit_->setPlainText(wrappedContent);
-    bubbleEdit_->setFrameStyle(QFrame::NoFrame);
-    bubbleEdit_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    bubbleEdit_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    static_cast<BubbleTextEdit *>(bubbleEdit_)->resetViewportMargins();
-    bubbleEdit_->setLineWrapMode(QTextEdit::WidgetWidth);
-    bubbleEdit_->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    bubbleEdit_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    bubbleEdit_->setTabChangesFocus(true);
-    bubbleEdit_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    bubbleLabel_->setText(wrappedContent);
+    bubbleLabel_->setTextFormat(Qt::PlainText);
+    bubbleLabel_->setWordWrap(true);
+    bubbleLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    bubbleLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    bubbleLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     fitBubbleSize();
 
@@ -89,7 +68,7 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     timeLabel->setFont(timeFont);
 
     bubbleLayout_->addWidget(nameLabel);
-    bubbleLayout_->addWidget(bubbleEdit_);
+    bubbleLayout_->addWidget(bubbleLabel_);
     bubbleLayout_->addWidget(timeLabel);
 
     if (side == Right) {
@@ -110,33 +89,26 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
 }
 
 void MessageWidget::fitBubbleSize() {
-    bubbleEdit_->ensurePolished();
-    QTextDocument *doc = bubbleEdit_->document();
-
-    const int margin = 12;
-    doc->setDocumentMargin(margin);
-
-    QTextFrameFormat rootFormat = doc->rootFrame()->frameFormat();
-    rootFormat.setMargin(0);
-    rootFormat.setPadding(0);
-    doc->rootFrame()->setFrameFormat(rootFormat);
-
-    const QFontMetrics fm(bubbleEdit_->fontMetrics());
+    bubbleLabel_->ensurePolished();
+    const QFontMetrics fm(bubbleLabel_->fontMetrics());
     const QStringList lines = contentText_.split('\n');
     int maxLineW = 0;
     for (const QString &line : lines) {
         maxLineW = qMax(maxLineW, fm.horizontalAdvance(line));
     }
 
-    const int totalMargin = margin * 2;
-    const int bubbleW = qBound(20, qMin(maxLineW + totalMargin + 6, maxBubbleWidth_), maxBubbleWidth_);
+    const int horizontalPadding = kBubbleHorizontalPadding * 2;
+    const int verticalPadding = kBubbleVerticalPadding * 2;
+    const int maxContentWidth = qMax(kMinBubbleContentWidth, maxBubbleWidth_ - horizontalPadding);
+    const int contentWidth = qBound(kMinBubbleContentWidth, maxLineW, maxContentWidth);
 
-    doc->setTextWidth(bubbleW - totalMargin);
-    bubbleEdit_->setFixedWidth(bubbleW);
-
-    const int bubbleH = qMax(32, int(std::ceil(doc->size().height())));
-    bubbleEdit_->setFixedHeight(bubbleH);
-    bubbleEdit_->verticalScrollBar()->setValue(0);
+    QRect textRect = fm.boundingRect(QRect(0, 0, contentWidth, 10000),
+                                     Qt::TextWordWrap | Qt::TextWrapAnywhere,
+                                     contentText_);
+    const int bubbleW = contentWidth + horizontalPadding;
+    const int bubbleH = qMax(fm.lineSpacing() + verticalPadding,
+                             int(std::ceil(textRect.height())) + verticalPadding);
+    bubbleLabel_->setFixedSize(bubbleW, bubbleH);
 
     setMinimumHeight(qMax(70, bubbleH + 46));
 }
