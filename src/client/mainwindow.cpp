@@ -13,6 +13,7 @@
 #include <QStatusBar>
 #include <QResizeEvent>
 #include <QKeyEvent>
+#include <QPointer>
 #include <QTimer>
 
 MainWindow::MainWindow(ChatClient *client, QWidget *parent)
@@ -358,8 +359,21 @@ void MainWindow::addChatMessage(const QString &username, const QString &content,
 
     QScrollArea *scrollArea = chatScrollAreas_[chatName];
     if (scrollArea) {
-        QScrollBar *bar = scrollArea->verticalScrollBar();
-        QTimer::singleShot(50, this, [bar]() { bar->setValue(bar->maximum()); });
+        QPointer<QScrollBar> bar(scrollArea->verticalScrollBar());
+        QPointer<MessageWidget> msgPtr(msgWidget);
+        QTimer::singleShot(0, this, [this, chatName, msgPtr]() {
+            if (msgPtr) {
+                msgPtr->updateWidth(bubbleMaxWidthForChat(chatName));
+            }
+        });
+        QTimer::singleShot(50, this, [this, bar, chatName, msgPtr]() {
+            if (msgPtr) {
+                msgPtr->updateWidth(bubbleMaxWidthForChat(chatName));
+            }
+            if (bar) {
+                bar->setValue(bar->maximum());
+            }
+        });
     }
 }
 
