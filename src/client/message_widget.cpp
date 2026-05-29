@@ -1,12 +1,69 @@
 #include "message_widget.h"
 #include <QFontMetrics>
+#include <QPainter>
+#include <QStyle>
+#include <QStyleOption>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextOption>
 #include <cmath>
 
 namespace {
 
-constexpr int kBubbleHorizontalPadding = 14;
-constexpr int kBubbleVerticalPadding = 8;
+constexpr int kBubbleHorizontalPadding = 10;
+constexpr int kBubbleVerticalPadding = 6;
 constexpr int kMinBubbleContentWidth = 32;
+
+class BubbleTextWidget : public QWidget {
+public:
+    explicit BubbleTextWidget(const QString &text, QWidget *parent = nullptr)
+        : QWidget(parent), text_(text) {
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        setAttribute(Qt::WA_StyledBackground, true);
+    }
+
+    QSize textSizeForWidth(int width) const {
+        QTextDocument doc;
+        configureDocument(&doc, width);
+        return QSize(int(std::ceil(doc.size().width())),
+                     int(std::ceil(doc.size().height())));
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter painter(this);
+
+        QStyleOption option;
+        option.initFrom(this);
+        style()->drawPrimitive(QStyle::PE_Widget, &option, &painter, this);
+
+        QTextDocument doc;
+        configureDocument(&doc, qMax(0, width() - kBubbleHorizontalPadding * 2));
+        painter.translate(kBubbleHorizontalPadding, kBubbleVerticalPadding);
+        doc.drawContents(&painter);
+    }
+
+private:
+    void configureDocument(QTextDocument *doc, int width) const {
+        QTextOption option;
+        option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        option.setAlignment(Qt::AlignLeft);
+
+        doc->setDocumentMargin(0);
+        doc->setDefaultFont(font());
+        doc->setDefaultTextOption(option);
+        doc->setPlainText(text_);
+        doc->setTextWidth(width);
+
+        QTextCursor cursor(doc);
+        cursor.select(QTextCursor::Document);
+        QTextCharFormat format;
+        format.setForeground(palette().color(QPalette::WindowText));
+        cursor.mergeCharFormat(format);
+    }
+
+    QString text_;
+};
 
 }
 
@@ -45,19 +102,13 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     nameFont.setBold(true);
     nameLabel->setFont(nameFont);
 
-    bubbleLabel_ = new QLabel;
-    bubbleLabel_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
     QString wrappedContent = content;
     while (wrappedContent.endsWith('\n')) {
         wrappedContent.chop(1);
     }
     contentText_ = wrappedContent;
-    bubbleLabel_->setText(wrappedContent);
-    bubbleLabel_->setTextFormat(Qt::PlainText);
-    bubbleLabel_->setWordWrap(true);
-    bubbleLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    bubbleLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    bubbleLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    bubbleWidget_ = new BubbleTextWidget(wrappedContent);
+    bubbleWidget_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
 
     fitBubbleSize();
 
@@ -68,7 +119,7 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     timeLabel->setFont(timeFont);
 
     bubbleLayout_->addWidget(nameLabel);
-    bubbleLayout_->addWidget(bubbleLabel_);
+    bubbleLayout_->addWidget(bubbleWidget_);
     bubbleLayout_->addWidget(timeLabel);
 
     if (side == Right) {
@@ -89,8 +140,8 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
 }
 
 void MessageWidget::fitBubbleSize() {
-    bubbleLabel_->ensurePolished();
-    const QFontMetrics fm(bubbleLabel_->fontMetrics());
+    bubbleWidget_->ensurePolished();
+    const QFontMetrics fm(bubbleWidget_->fontMetrics());
     const QStringList lines = contentText_.split('\n');
     int maxLineW = 0;
     for (const QString &line : lines) {
@@ -102,13 +153,11 @@ void MessageWidget::fitBubbleSize() {
     const int maxContentWidth = qMax(kMinBubbleContentWidth, maxBubbleWidth_ - horizontalPadding);
     const int contentWidth = qBound(kMinBubbleContentWidth, maxLineW, maxContentWidth);
 
-    QRect textRect = fm.boundingRect(QRect(0, 0, contentWidth, 10000),
-                                     Qt::TextWordWrap | Qt::TextWrapAnywhere,
-                                     contentText_);
+    QSize textSize = static_cast<BubbleTextWidget *>(bubbleWidget_)->textSizeForWidth(contentWidth);
     const int bubbleW = contentWidth + horizontalPadding;
     const int bubbleH = qMax(fm.lineSpacing() + verticalPadding,
-                             int(std::ceil(textRect.height())) + verticalPadding);
-    bubbleLabel_->setFixedSize(bubbleW, bubbleH);
+                             textSize.height() + verticalPadding);
+    bubbleWidget_->setFixedSize(bubbleW, bubbleH);
 
     setMinimumHeight(qMax(70, bubbleH + 46));
 }

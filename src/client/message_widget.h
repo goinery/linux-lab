@@ -25,7 +25,7 @@ private:
     void fitBubbleSize();
 
     int maxBubbleWidth_;
-    QLabel *bubbleLabel_;
+    QWidget *bubbleWidget_;
     QVBoxLayout *bubbleLayout_;
     QString contentText_;
 };
