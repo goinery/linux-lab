@@ -3,6 +3,21 @@
 #include <QTextDocument>
 #include <QTextFrame>
 #include <QTextFrameFormat>
+#include <QWheelEvent>
+
+namespace {
+
+class BubbleTextEdit : public QTextEdit {
+public:
+    using QTextEdit::QTextEdit;
+
+protected:
+    void wheelEvent(QWheelEvent *event) override {
+        event->ignore();
+    }
+};
+
+}
 
 MessageWidget::MessageWidget(const QString &username, const QString &content,
                              const QString &time, MessageSide side,
@@ -39,7 +54,7 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     nameFont.setBold(true);
     nameLabel->setFont(nameFont);
 
-    bubbleEdit_ = new QTextEdit;
+    bubbleEdit_ = new BubbleTextEdit;
     bubbleEdit_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
     bubbleEdit_->setReadOnly(true);
     QString wrappedContent = content;
