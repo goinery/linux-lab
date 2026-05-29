@@ -1,15 +1,22 @@
 #include "message_widget.h"
 #include <QFontMetrics>
+#include <QScrollBar>
 #include <QTextDocument>
 #include <QTextFrame>
 #include <QTextFrameFormat>
+#include <QTextOption>
 #include <QWheelEvent>
+#include <cmath>
 
 namespace {
 
 class BubbleTextEdit : public QTextEdit {
 public:
     using QTextEdit::QTextEdit;
+
+    void resetViewportMargins() {
+        setViewportMargins(0, 0, 0, 0);
+    }
 
 protected:
     void wheelEvent(QWheelEvent *event) override {
@@ -61,10 +68,14 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     while (wrappedContent.endsWith('\n')) {
         wrappedContent.chop(1);
     }
+    contentText_ = wrappedContent;
     bubbleEdit_->setPlainText(wrappedContent);
     bubbleEdit_->setFrameStyle(QFrame::NoFrame);
     bubbleEdit_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     bubbleEdit_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    static_cast<BubbleTextEdit *>(bubbleEdit_)->resetViewportMargins();
+    bubbleEdit_->setLineWrapMode(QTextEdit::WidgetWidth);
+    bubbleEdit_->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     bubbleEdit_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     bubbleEdit_->setTabChangesFocus(true);
     bubbleEdit_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -123,8 +134,9 @@ void MessageWidget::fitBubbleSize() {
     doc->setTextWidth(bubbleW - totalMargin);
     bubbleEdit_->setFixedWidth(bubbleW);
 
-    const int bubbleH = qMax(32, int(doc->size().height()));
+    const int bubbleH = qMax(32, int(std::ceil(doc->size().height())));
     bubbleEdit_->setFixedHeight(bubbleH);
+    bubbleEdit_->verticalScrollBar()->setValue(0);
 
     setMinimumHeight(qMax(70, bubbleH + 46));
 }
