@@ -315,15 +315,32 @@ QListWidget#userList::item:selected {
 
 #bubbleSelf {
     background: @primary@;
-    color: @onPrimary@;
     border-radius: 16px;
     border: none;
 }
 #bubbleOther {
     background: @bgBubbleOther@;
-    color: @textBubbleOther@;
     border-radius: 16px;
     border: 1px solid @borderBubbleOther@;
+}
+
+#bubbleText {
+    background: transparent;
+    border: none;
+    padding: 0px;
+    font-size: 14px;
+}
+
+#bubbleSelf #bubbleText {
+    color: @onPrimary@;
+    selection-background-color: rgba(255,255,255,0.4);
+    selection-color: @onPrimary@;
+}
+
+#bubbleOther #bubbleText {
+    color: @textBubbleOther@;
+    selection-background-color: @primary@;
+    selection-color: @onPrimary@;
 }
 
 #nameSelf {
