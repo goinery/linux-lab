@@ -15,6 +15,7 @@
 #include <QKeyEvent>
 #include <QPointer>
 #include <QTimer>
+#include <QSizePolicy>
 
 MainWindow::MainWindow(ChatClient *client, QWidget *parent)
     : QMainWindow(parent), client_(client), currentChat_("general") {
@@ -65,6 +66,7 @@ void MainWindow::setupUI() {
     QWidget *leftPanel = new QWidget;
     leftPanel->setObjectName("leftPanel");
     leftPanel->setMinimumWidth(160);
+    leftPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setContentsMargins(0, 0, 0, 0);
     leftLayout->setSpacing(0);
@@ -91,7 +93,8 @@ void MainWindow::setupUI() {
 
     QWidget *rightPanel = new QWidget;
     rightPanel->setObjectName("rightPanel");
-    rightPanel->setMinimumWidth(400);
+    rightPanel->setMinimumWidth(0);
+    rightPanel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
@@ -137,7 +140,8 @@ void MainWindow::setupUI() {
     splitter_->addWidget(rightPanel);
     splitter_->setStretchFactor(0, 0);
     splitter_->setStretchFactor(1, 1);
-    splitter_->setSizes(QList<int>{220, 780});
+    splitter_->setCollapsible(0, false);
+    splitter_->setCollapsible(1, true);
 
     mainLayout_->addWidget(splitter_);
 
@@ -160,6 +164,16 @@ void MainWindow::setupStatusBar() {
 }
 
 void MainWindow::toggleFullscreen() {
+    QWidget *host = window();
+    if (host && host != this) {
+        if (host->isFullScreen()) {
+            host->showNormal();
+        } else {
+            host->showFullScreen();
+        }
+        return;
+    }
+
     if (isFullScreen()) {
         showNormal();
     } else {

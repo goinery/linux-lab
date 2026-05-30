@@ -18,6 +18,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSet>
+#include <QTimer>
 #include <QWindow>
 
 #include "chat_client.h"
@@ -38,7 +39,7 @@ UnifiedFlowWindow::UnifiedFlowWindow(const QString &defaultHost, quint16 default
     setMinimumSize(800, 540);
 
     buildUi(defaultHost, defaultPort, defaultServerMode);
-    centerToHalfScreen();
+    QTimer::singleShot(0, this, [this]() { centerToHalfScreen(); });
     applyTheme();
 
     connect(client_, &ChatClient::connected, this, &UnifiedFlowWindow::onClientConnected);
@@ -233,18 +234,11 @@ void UnifiedFlowWindow::setTheme(int index) {
 void UnifiedFlowWindow::onWinMinimize() { showMinimized(); }
 
 void UnifiedFlowWindow::onWinMaxRestore() {
-    if (maximized_) {
-        setGeometry(normalGeometry_);
-        maximized_ = false;
-        if (maximizeBtn_) maximizeBtn_->setText("□");
+    if (isMaximized() || isFullScreen()) {
+        showNormal();
     } else {
         normalGeometry_ = geometry();
-        QScreen *screen = QGuiApplication::primaryScreen();
-        if (screen) {
-            setGeometry(screen->availableGeometry());
-        }
-        maximized_ = true;
-        if (maximizeBtn_) maximizeBtn_->setText("⊞");
+        showMaximized();
     }
 }
 
@@ -313,6 +307,7 @@ void UnifiedFlowWindow::setCurrentPage(QWidget *page, const QString &subtitle) {
 
 void UnifiedFlowWindow::changeEvent(QEvent *event) {
     if (event->type() == QEvent::WindowStateChange) {
+        maximized_ = isMaximized() || isFullScreen();
         if (maximizeBtn_) {
             maximizeBtn_->setText(maximized_ ? "⊞" : "□");
         }
@@ -439,7 +434,9 @@ QRect UnifiedFlowWindow::resizedGeometry(const QPoint &globalPos) const {
 }
 
 void UnifiedFlowWindow::centerToHalfScreen() {
-    QScreen *screen = QGuiApplication::primaryScreen();
+    QScreen *screen = windowHandle() && windowHandle()->screen()
+        ? windowHandle()->screen()
+        : QGuiApplication::primaryScreen();
     if (!screen) {
         resize(1000, 700);
         return;
