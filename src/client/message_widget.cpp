@@ -1,4 +1,6 @@
 #include "message_widget.h"
+#include <QAbstractTextDocumentLayout>
+#include <QFrame>
 #include <QFontMetrics>
 #include <QScrollBar>
 #include <QTextDocument>
@@ -17,7 +19,7 @@ constexpr int kMinBubbleHeight = 34;
 class BubbleTextEdit : public QTextEdit {
 public:
     explicit BubbleTextEdit(QWidget *parent = nullptr)
-        : QTextEdit(parent), maxBubbleWidth_(400) {
+        : QTextEdit(parent) {
         setReadOnly(true);
         setAcceptRichText(false);
         setFrameStyle(QFrame::NoFrame);
@@ -28,9 +30,6 @@ public:
         setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         setTabChangesFocus(true);
         setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-        setViewportMargins(kBubbleHorizontalPadding, kBubbleVerticalPadding,
-                           kBubbleHorizontalPadding, kBubbleVerticalPadding);
-        setAttribute(Qt::WA_StyledBackground, true);
         setAutoFillBackground(false);
         viewport()->setAutoFillBackground(false);
         viewport()->setAttribute(Qt::WA_TranslucentBackground);
@@ -40,39 +39,34 @@ public:
 
     void setBubbleText(const QString &text) {
         setPlainText(text);
-        updateBubbleSize(maxBubbleWidth_);
     }
 
-    void updateBubbleSize(int maxBubbleWidth) {
-        maxBubbleWidth_ = maxBubbleWidth;
+    QSize updateContentSize(int contentWidth) {
         ensurePolished();
 
         document()->setDefaultFont(font());
         document()->setDocumentMargin(0);
         applyWrapOption(document());
 
-        const int horizontalPadding = kBubbleHorizontalPadding * 2;
-        const int verticalPadding = kBubbleVerticalPadding * 2;
-        const int borderWidth = bubbleBorderWidth();
-        const int horizontalChrome = horizontalPadding + borderWidth * 2;
-        const int verticalChrome = verticalPadding + borderWidth * 2;
-        const int maxContentWidth = qMax(kMinBubbleContentWidth,
-                                         maxBubbleWidth_ - horizontalChrome);
-        const int naturalWidth = qMax(kMinBubbleContentWidth, naturalTextWidth());
-        const int contentWidth = qBound(kMinBubbleContentWidth, naturalWidth, maxContentWidth);
-
         setLineWrapColumnOrWidth(contentWidth);
         document()->setTextWidth(contentWidth);
-        document()->adjustSize();
 
-        const QFontMetrics fm(font());
-        const int textHeight = int(std::ceil(document()->size().height()));
-        const int bubbleHeight = qMax(kMinBubbleHeight,
-                                      qMax(fm.lineSpacing() + verticalChrome,
-                                           textHeight + verticalChrome));
-        setFixedSize(contentWidth + horizontalChrome, bubbleHeight);
+        const QSizeF textSize = document()->documentLayout()->documentSize();
+        const int textHeight = int(std::ceil(textSize.height()));
+        setFixedSize(contentWidth, textHeight);
         verticalScrollBar()->setValue(0);
         horizontalScrollBar()->setValue(0);
+        return QSize(contentWidth, textHeight);
+    }
+
+    int naturalTextWidth() const {
+        QTextDocument measureDoc;
+        measureDoc.setDefaultFont(font());
+        measureDoc.setDocumentMargin(0);
+        applyWrapOption(&measureDoc);
+        measureDoc.setPlainText(toPlainText());
+        measureDoc.setTextWidth(-1);
+        return int(std::ceil(measureDoc.idealWidth()));
     }
 
 protected:
@@ -88,24 +82,6 @@ private:
         doc->setDefaultTextOption(option);
     }
 
-    int naturalTextWidth() const {
-        QTextDocument measureDoc;
-        measureDoc.setDefaultFont(font());
-        measureDoc.setDocumentMargin(0);
-        applyWrapOption(&measureDoc);
-        measureDoc.setPlainText(toPlainText());
-        measureDoc.setTextWidth(-1);
-        return int(std::ceil(measureDoc.idealWidth()));
-    }
-
-    int bubbleBorderWidth() const {
-        if (objectName() == QLatin1String("bubbleOther")) {
-            return 1;
-        }
-        return qMax(0, frameWidth());
-    }
-
-    int maxBubbleWidth_;
 };
 
 }
@@ -150,9 +126,22 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
         wrappedContent.chop(1);
     }
     contentText_ = wrappedContent;
-    bubbleEdit_ = new BubbleTextEdit;
-    bubbleEdit_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
+    bubbleFrame_ = new QFrame;
+    bubbleFrame_->setObjectName(side == Right ? "bubbleSelf" : "bubbleOther");
+    bubbleFrame_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+    QVBoxLayout *bubbleFrameLayout = new QVBoxLayout(bubbleFrame_);
+    const int bubbleBorder = side == Left ? 1 : 0;
+    bubbleFrameLayout->setContentsMargins(kBubbleHorizontalPadding + bubbleBorder,
+                                          kBubbleVerticalPadding + bubbleBorder,
+                                          kBubbleHorizontalPadding + bubbleBorder,
+                                          kBubbleVerticalPadding + bubbleBorder);
+    bubbleFrameLayout->setSpacing(0);
+
+    bubbleEdit_ = new BubbleTextEdit(bubbleFrame_);
+    bubbleEdit_->setObjectName("bubbleText");
     static_cast<BubbleTextEdit *>(bubbleEdit_)->setBubbleText(wrappedContent);
+    bubbleFrameLayout->addWidget(bubbleEdit_);
 
     fitBubbleSize();
 
@@ -163,7 +152,7 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
     timeLabel->setFont(timeFont);
 
     bubbleLayout_->addWidget(nameLabel);
-    bubbleLayout_->addWidget(bubbleEdit_);
+    bubbleLayout_->addWidget(bubbleFrame_);
     bubbleLayout_->addWidget(timeLabel);
 
     if (side == Right) {
@@ -184,8 +173,25 @@ MessageWidget::MessageWidget(const QString &username, const QString &content,
 }
 
 void MessageWidget::fitBubbleSize() {
-    static_cast<BubbleTextEdit *>(bubbleEdit_)->updateBubbleSize(maxBubbleWidth_);
-    setMinimumHeight(qMax(70, bubbleEdit_->height() + 46));
+    bubbleFrame_->ensurePolished();
+    bubbleEdit_->ensurePolished();
+
+    const int borderWidth = bubbleFrame_->objectName() == QLatin1String("bubbleOther") ? 1 : 0;
+    const int horizontalChrome = (kBubbleHorizontalPadding + borderWidth) * 2;
+    const int verticalChrome = (kBubbleVerticalPadding + borderWidth) * 2;
+    const int maxContentWidth = qMax(kMinBubbleContentWidth,
+                                     maxBubbleWidth_ - horizontalChrome);
+    const int naturalWidth = qMax(kMinBubbleContentWidth,
+                                  static_cast<BubbleTextEdit *>(bubbleEdit_)->naturalTextWidth());
+    const int contentWidth = qBound(kMinBubbleContentWidth, naturalWidth, maxContentWidth);
+    const QSize textSize = static_cast<BubbleTextEdit *>(bubbleEdit_)->updateContentSize(contentWidth);
+
+    const QFontMetrics fm(bubbleEdit_->fontMetrics());
+    const int bubbleHeight = qMax(kMinBubbleHeight,
+                                  qMax(fm.lineSpacing() + verticalChrome,
+                                       textSize.height() + verticalChrome));
+    bubbleFrame_->setFixedSize(contentWidth + horizontalChrome, bubbleHeight);
+    setMinimumHeight(qMax(70, bubbleFrame_->height() + 46));
 }
 
 void MessageWidget::updateWidth(int newMaxWidth) {
