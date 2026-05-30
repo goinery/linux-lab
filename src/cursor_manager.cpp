@@ -1,6 +1,17 @@
 #include "cursor_manager.h"
 
+#include <algorithm>
+
 #include <QDebug>
+
+namespace {
+constexpr int kCursorSize = 32;
+constexpr int kSourceCursorSize = 64;
+
+int scaleHotspot(int hotspot) {
+    return std::clamp(hotspot * kCursorSize / kSourceCursorSize, 0, kCursorSize - 1);
+}
+} // namespace
 
 CursorManager &CursorManager::instance() {
     static CursorManager mgr;
@@ -40,7 +51,10 @@ QCursor CursorManager::loadCursor(const QString &resourcePath,
                    << "— falling back to Qt built-in cursor";
         return QCursor(fallback);
     }
-    return QCursor(pix, hotspotX, hotspotY);
+    pix = pix.scaled(kCursorSize, kCursorSize,
+                     Qt::IgnoreAspectRatio,
+                     Qt::SmoothTransformation);
+    return QCursor(pix, scaleHotspot(hotspotX), scaleHotspot(hotspotY));
 }
 
 const QCursor &CursorManager::arrow()      const { return arrowCursor_; }
