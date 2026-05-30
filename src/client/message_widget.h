@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
+class QFrame;
 class QTextEdit;
 
 class MessageWidget : public QWidget {
@@ -27,6 +28,7 @@ private:
     void fitBubbleSize();
 
     int maxBubbleWidth_;
+    QFrame *bubbleFrame_;
     QTextEdit *bubbleEdit_;
     QVBoxLayout *bubbleLayout_;
     QString contentText_;
