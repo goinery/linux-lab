@@ -118,7 +118,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     connect(disconnectSideBtn_, &QPushButton::clicked, this, [this]() {
         if (client_->isConnected()) client_->permanentDisconnect();
         stopServerIfRunning();
-        startupStatusLabel_->setText("服务端已停止");
+        setStatus(startupStatusLabel_, "服务端已停止", "info");
         serverLogList_->clear();
         setCurrentPage(startupPage_, "启动页");
     });
@@ -130,13 +130,13 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         QMessageBox box(this);
         box.setCursor(CursorManager::instance().arrow());
         box.setWindowTitle("关于 ChatRoom");
-        box.setText("<h1 style='margin:0;color:#2d4a34;'>✦ ChatRoom v1.0</h1>");
+        box.setText("<h1 style='margin:0;'>✦ ChatRoom v1.0</h1>");
         box.setInformativeText(
             "<p style='font-size:13px;line-height:1.8;'>"
             "现代化多线程图形界面聊天室<br>"
             "基于 <b>Qt + CMake</b> 构建 · 多主题切换</p>"
-            "<hr style='border:0.5px solid #d0e0d0;'>"
-            "<p style='font-size:12px;color:#666;'>"
+            "<hr>"
+            "<p style='font-size:12px;'>"
             "<b>功能</b>　服务端/客户端双模式 · 禁言管理 · 服务器公告<br>"
             "<b>快捷键</b>　F11 全屏　·　Ctrl+D 断开</p>");
         box.setIconPixmap(QPixmap());
@@ -149,13 +149,6 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
             okBtn->setMinimumWidth(100);
             okBtn->setCursor(CursorManager::instance().arrow());
         }
-
-        box.setStyleSheet(
-            "QMessageBox { background: #f6faf4; border-radius: 16px; }"
-            "QLabel { color: #2d4434; }"
-            "QPushButton { border: 1px solid #bccfbc; border-radius: 10px;"
-            "  padding: 7px 24px; background: #f0f5ee; color: #2d4a34; }"
-            "QPushButton:hover { background: #e0ece0; }");
 
         QRect myGeo = geometry();
         QSize boxSize = box.sizeHint();
@@ -246,6 +239,12 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
                 &UnifiedFlowWindow::onModeChanged);
         connect(nextButton, &QPushButton::clicked, this,
                 &UnifiedFlowWindow::onNextClicked);
+        connect(serverPortEdit_, &QLineEdit::returnPressed,
+                nextButton, &QPushButton::click);
+        connect(clientHostEdit_, &QLineEdit::returnPressed,
+                nextButton, &QPushButton::click);
+        connect(clientPortEdit_, &QLineEdit::returnPressed,
+                nextButton, &QPushButton::click);
         onModeChanged();
     }
 
@@ -326,7 +325,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
 
         connect(backButton, &QPushButton::clicked, this, [this]() {
             stopServerIfRunning();
-            startupStatusLabel_->setText("服务端已停止");
+            setStatus(startupStatusLabel_, "服务端已停止", "info");
             serverLogList_->clear();
             setCurrentPage(startupPage_, "启动页");
         });
@@ -425,6 +424,11 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
                 &UnifiedFlowWindow::onAuthAction);
         connect(backBtn, &QPushButton::clicked, this,
                 &UnifiedFlowWindow::onBackToStart);
+        for (QLineEdit *edit : {loginUserEdit_, loginPassEdit_, regUserEdit_,
+                                regPassEdit_, regConfirmEdit_}) {
+            connect(edit, &QLineEdit::returnPressed,
+                    authActionButton_, &QPushButton::click);
+        }
         onAuthModeChanged();
     }
 

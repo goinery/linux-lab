@@ -127,6 +127,8 @@ void MainWindow::refreshUserItemVisual(const QString &chatName) {
     layout->setSpacing(6);
 
     QLabel *nameLabel = new QLabel(displayNameForChat(chatName));
+    nameLabel->setObjectName("userItemName");
+    nameLabel->setProperty("selected", item->isSelected());
     nameLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     nameLabel->setMinimumWidth(0);
     const int unreadCount = unreadCounts_.value(chatName, 0);
@@ -134,20 +136,12 @@ void MainWindow::refreshUserItemVisual(const QString &chatName) {
     QFont nameFont = nameLabel->font();
     nameFont.setBold(hasUnread || item->isSelected());
     nameLabel->setFont(nameFont);
-    nameLabel->setStyleSheet(item->isSelected() ? "color: #ffffff;"
-                                                 : "color: #b0b8c8;");
 
     QLabel *badgeLabel = new QLabel;
+    badgeLabel->setObjectName("unreadBadge");
     badgeLabel->setAlignment(Qt::AlignCenter);
     badgeLabel->setFixedHeight(22);
     badgeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    badgeLabel->setStyleSheet(
-        "background-color: #ff4d4f;"
-        "color: #ffffff;"
-        "border-radius: 11px;"
-        "font-size: 11px;"
-        "font-weight: 700;"
-        "padding: 0 4px;");
 
     if (hasUnread) {
         const QString badgeText = unreadCount > 99 ? "99+" : QString::number(unreadCount);

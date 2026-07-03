@@ -8,16 +8,21 @@
 #include <QFile>
 #include <QFont>
 #include <QFontDatabase>
+#include <QGraphicsDropShadowEffect>
+#include <QGraphicsOpacityEffect>
 #include <QGuiApplication>
 #include <QHostAddress>
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QNetworkInterface>
+#include <QPointer>
+#include <QPropertyAnimation>
 #include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSet>
+#include <QStyle>
 #include <QTimer>
 #include <QWindow>
 
@@ -61,7 +66,7 @@ void UnifiedFlowWindow::onNextClicked() {
     if (serverModeRadio_->isChecked()) {
         int p = serverPortEdit_->text().trimmed().toInt(&ok);
         if (!ok || p <= 0 || p > 65535) {
-            startupStatusLabel_->setText("请输入有效的服务端口(1-65535)");
+            setStatus(startupStatusLabel_, "请输入有效的服务端口(1-65535)", "error");
             return;
         }
 
@@ -77,7 +82,7 @@ void UnifiedFlowWindow::onNextClicked() {
         connect(server_, &ChatServer::serverLogUpdated, this, &UnifiedFlowWindow::onServerLogUpdated);
 
         if (!server_->start()) {
-            startupStatusLabel_->setText("服务端启动失败，请检查端口是否被占用");
+            setStatus(startupStatusLabel_, "服务端启动失败，请检查端口是否被占用", "error");
             return;
         }
 
@@ -102,16 +107,16 @@ void UnifiedFlowWindow::onNextClicked() {
     const QString host = clientHostEdit_->text().trimmed();
     int p = clientPortEdit_->text().trimmed().toInt(&ok);
     if (host.isEmpty()) {
-        startupStatusLabel_->setText("请输入服务端地址");
+        setStatus(startupStatusLabel_, "请输入服务端地址", "error");
         return;
     }
     if (!ok || p <= 0 || p > 65535) {
-        startupStatusLabel_->setText("请输入有效的服务端口(1-65535)");
+        setStatus(startupStatusLabel_, "请输入有效的服务端口(1-65535)", "error");
         return;
     }
 
     endpointLabel_->setText(QString("目标服务器: %1:%2").arg(host).arg(p));
-    authStatusLabel_->setText("正在连接服务器...");
+    setStatus(authStatusLabel_, "正在连接服务器...", "info");
     authActionButton_->setEnabled(false);
     pendingHost_ = host;
     pendingPort_ = quint16(p);
@@ -138,7 +143,7 @@ void UnifiedFlowWindow::onAuthModeChanged() {
 
 void UnifiedFlowWindow::onAuthAction() {
     if (!client_->isConnected()) {
-        authStatusLabel_->setText("尚未连接服务器，请返回重新连接");
+        setStatus(authStatusLabel_, "尚未连接服务器，请返回重新连接", "error");
         return;
     }
 
@@ -146,47 +151,47 @@ void UnifiedFlowWindow::onAuthAction() {
         const QString user = loginUserEdit_->text().trimmed();
         const QString pass = loginPassEdit_->text();
         if (user.isEmpty() || pass.isEmpty()) {
-            authStatusLabel_->setText("请输入用户名和密码");
+            setStatus(authStatusLabel_, "请输入用户名和密码", "error");
             return;
         }
         pendingAuthType_ = Login;
-        authStatusLabel_->setText("正在登录...");
+        setStatus(authStatusLabel_, "正在登录...", "info");
         client_->sendMessage(Protocol::createLoginRequest(user, pass));
     } else {
         const QString user = regUserEdit_->text().trimmed();
         const QString pass = regPassEdit_->text();
         const QString confirm = regConfirmEdit_->text();
         if (user.length() < 2) {
-            authStatusLabel_->setText("用户名至少2个字符");
+            setStatus(authStatusLabel_, "用户名至少2个字符", "error");
             return;
         }
         if (pass.length() < 4) {
-            authStatusLabel_->setText("密码至少4个字符");
+            setStatus(authStatusLabel_, "密码至少4个字符", "error");
             return;
         }
         if (pass != confirm) {
-            authStatusLabel_->setText("两次输入的密码不一致");
+            setStatus(authStatusLabel_, "两次输入的密码不一致", "error");
             return;
         }
         pendingAuthType_ = Register;
-        authStatusLabel_->setText("正在注册...");
+        setStatus(authStatusLabel_, "正在注册...", "info");
         client_->sendMessage(Protocol::createRegisterRequest(user, pass));
     }
 }
 
 void UnifiedFlowWindow::onClientConnected() {
-    authStatusLabel_->setText("连接成功，请登录或注册");
+    setStatus(authStatusLabel_, "连接成功，请登录或注册", "ok");
     authActionButton_->setEnabled(true);
 }
 
 void UnifiedFlowWindow::onClientDisconnected() {
     authActionButton_->setEnabled(false);
-    authStatusLabel_->setText("已断开连接");
+    setStatus(authStatusLabel_, "已断开连接", "error");
 }
 
 void UnifiedFlowWindow::onClientError(const QString &err) {
     authActionButton_->setEnabled(false);
-    authStatusLabel_->setText("连接失败: " + err);
+    setStatus(authStatusLabel_, "连接失败: " + err, "error");
 }
 
 void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
@@ -196,7 +201,7 @@ void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
         QString text = msg["message"].toString();
         if (success) {
             client_->setUsername(loginUserEdit_->text().trimmed());
-            authStatusLabel_->setText("登录成功，正在进入聊天页...");
+            setStatus(authStatusLabel_, "登录成功，正在进入聊天页...", "ok");
             if (!chatPage_) {
                 chatPage_ = new MainWindow(client_, this);
                 chatPage_->setObjectName("embeddedChatPage");
@@ -204,13 +209,13 @@ void UnifiedFlowWindow::onClientMessageReceived(const QJsonObject &msg) {
             }
             setCurrentPage(chatPage_, "聊天室");
         } else {
-            authStatusLabel_->setText(text);
+            setStatus(authStatusLabel_, text, "error");
         }
         pendingAuthType_ = None;
     } else if (type == "register_response") {
         bool success = msg["success"].toBool();
         QString text = msg["message"].toString();
-        authStatusLabel_->setText(text);
+        setStatus(authStatusLabel_, text, success ? "ok" : "error");
         if (success) {
             loginModeRadio_->setChecked(true);
             loginUserEdit_->setText(regUserEdit_->text().trimmed());
@@ -287,6 +292,12 @@ QWidget *UnifiedFlowWindow::cardWidget(const QString &title) {
     QLabel *titleLabel = new QLabel(title);
     titleLabel->setObjectName("cardTitle");
     layout->addWidget(titleLabel);
+
+    auto *shadow = new QGraphicsDropShadowEffect(card);
+    shadow->setBlurRadius(24);
+    shadow->setOffset(0, 4);
+    shadow->setColor(QColor(0, 0, 0, 26));
+    card->setGraphicsEffect(shadow);
     return card;
 }
 
@@ -302,6 +313,34 @@ void UnifiedFlowWindow::setCurrentPage(QWidget *page, const QString &subtitle) {
     pages_->setCurrentWidget(page);
     if (topBarSubtitleLabel_) {
         topBarSubtitleLabel_->setText(subtitle);
+    }
+
+    if (!isVisible()) {
+        return;
+    }
+    auto *effect = new QGraphicsOpacityEffect(page);
+    page->setGraphicsEffect(effect);
+    auto *anim = new QPropertyAnimation(effect, "opacity", page);
+    anim->setDuration(180);
+    anim->setStartValue(0.0);
+    anim->setEndValue(1.0);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+    QPointer<QGraphicsOpacityEffect> effectGuard(effect);
+    connect(anim, &QPropertyAnimation::finished, page, [page, effectGuard]() {
+        // 仅当效果未被后续切页替换时才卸载，避免误删新效果
+        if (effectGuard && page->graphicsEffect() == effectGuard.data()) {
+            page->setGraphicsEffect(nullptr);
+        }
+    });
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void UnifiedFlowWindow::setStatus(QLabel *label, const QString &text, const char *kind) {
+    label->setText(text);
+    if (label->property("status").toString() != QLatin1String(kind)) {
+        label->setProperty("status", kind);
+        label->style()->unpolish(label);
+        label->style()->polish(label);
     }
 }
 
