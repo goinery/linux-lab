@@ -237,6 +237,20 @@ QListWidget::item:selected {
     font-weight: 600;
     font-size: 13px;
 }
+#statusLabel[status="ok"] {
+    color: @textStatusOk@;
+}
+#statusLabel[status="info"] {
+    color: @textSubtitle@;
+}
+
+/* ---- Message Box ---- */
+QMessageBox {
+    background: @bgCard@;
+}
+QMessageBox QLabel {
+    color: @textLabel@;
+}
 
 /* ---- Left Panel (用户列表) ---- */
 #leftPanel {
@@ -273,6 +287,23 @@ QListWidget#userList::item:selected {
     background: @primary@;
     border: 1px solid @primaryDark@;
     color: @onPrimary@;
+}
+
+/* 用户列表行内部件（itemWidget 不继承 ::item 文字色，需单独指定） */
+#userItemName {
+    background: transparent;
+    color: @textListItem@;
+}
+#userItemName[selected="true"] {
+    color: @onPrimary@;
+}
+#unreadBadge {
+    background: @badgeBg@;
+    color: @badgeFg@;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 4px;
 }
 
 /* ---- Right Panel / Chat ---- */
