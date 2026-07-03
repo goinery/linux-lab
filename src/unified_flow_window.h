@@ -61,6 +61,7 @@ private:
     void buildUi(const QString &defaultHost, quint16 defaultPort,
                  bool defaultServerMode);
     void setCurrentPage(QWidget *page, const QString &subtitle);
+    void setStatus(QLabel *label, const QString &text, const char *kind);
     Qt::Edges calcEdge(const QPoint &pos, const QSize &sz) const;
     void setEdgeCursor(Qt::Edges e);
     QRect resizedGeometry(const QPoint &globalPos) const;
