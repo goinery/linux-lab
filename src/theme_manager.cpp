@@ -71,7 +71,7 @@ ThemeManager::ThemePalette grayPalette() {
     p.textBody             = "#333333";
     p.textLabel            = "#444444";
     p.textTitle            = "#333333";
-    p.textSubtitle         = "#888888";
+    p.textSubtitle         = "#6b7280";
     p.textInput            = "#333333";
     p.textInputPlaceholder = "#a0a4ad";
     p.textListItem         = "#666666";
@@ -85,12 +85,15 @@ ThemeManager::ThemePalette grayPalette() {
     p.textBubbleOther      = "#333333";
     p.textNameSelf         = "#5c6bc0";
     p.textNameOther        = "#888888";
-    p.textTimeLabel        = "#aaaaaa";
-    p.textSystemMessage    = "#999999";
+    p.textTimeLabel        = "#8a9099";
+    p.textSystemMessage    = "#7f858d";
     p.textStatusLabel      = "#c0392b";
+    p.textStatusOk         = "#2e8b57";
 
     p.avatarOtherBg      = "#888888";
     p.avatarOtherFg      = "#ffffff";
+    p.badgeBg            = "#e5484d";
+    p.badgeFg            = "#ffffff";
     p.scrollHandle       = "#c0c4cc";
     p.scrollHandleHover  = "#909399";
     p.splitterBg         = "#e0e2e5";
@@ -166,9 +169,12 @@ ThemeManager::ThemePalette mintPalette() {
     p.textTimeLabel        = "#667a68";
     p.textSystemMessage    = "#667a68";
     p.textStatusLabel      = "#c0392b";
+    p.textStatusOk         = "#3d7a4e";
 
     p.avatarOtherBg      = "#7a9db8";
     p.avatarOtherFg      = "#ffffff";
+    p.badgeBg            = "#d9534f";
+    p.badgeFg            = "#ffffff";
     p.scrollHandle       = "#b8ccb8";
     p.scrollHandleHover  = "#9cb89c";
     p.splitterBg         = "#d0e0d0";
@@ -244,9 +250,12 @@ ThemeManager::ThemePalette skyPalette() {
     p.textTimeLabel        = "#5c708f";
     p.textSystemMessage    = "#5c708f";
     p.textStatusLabel      = "#c03b46";
+    p.textStatusOk         = "#2f7d5a";
 
     p.avatarOtherBg      = "#8ba4c2";
     p.avatarOtherFg      = "#ffffff";
+    p.badgeBg            = "#e5484d";
+    p.badgeFg            = "#ffffff";
     p.scrollHandle       = "#b8c8dc";
     p.scrollHandleHover  = "#9db0c8";
     p.splitterBg         = "#cdddec";
@@ -322,9 +331,12 @@ ThemeManager::ThemePalette nightPalette() {
     p.textTimeLabel        = "#788ba8";
     p.textSystemMessage    = "#788ba8";
     p.textStatusLabel      = "#ff8b94";
+    p.textStatusOk         = "#5dd39e";
 
     p.avatarOtherBg      = "#3a5075";
     p.avatarOtherFg      = "#dce8f5";
+    p.badgeBg            = "#d43a3c";
+    p.badgeFg            = "#ffffff";
     p.scrollHandle       = "#2a4462";
     p.scrollHandleHover  = "#345478";
     p.splitterBg         = "#243654";
@@ -439,9 +451,12 @@ QString ThemeManager::render(const ThemePalette &p) {
         { "@textTimeLabel@",         p.textTimeLabel },
         { "@textSystemMessage@",     p.textSystemMessage },
         { "@textStatusLabel@",       p.textStatusLabel },
+        { "@textStatusOk@",          p.textStatusOk },
 
         { "@avatarOtherBg@",         p.avatarOtherBg },
         { "@avatarOtherFg@",         p.avatarOtherFg },
+        { "@badgeBg@",               p.badgeBg },
+        { "@badgeFg@",               p.badgeFg },
         { "@scrollHandle@",          p.scrollHandle },
         { "@scrollHandleHover@",     p.scrollHandleHover },
         { "@splitterBg@",            p.splitterBg },

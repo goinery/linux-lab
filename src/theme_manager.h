@@ -91,10 +91,13 @@ public:
         QString textTimeLabel;
         QString textSystemMessage;
         QString textStatusLabel;      // 错误提示色
+        QString textStatusOk;         // 成功提示色
 
         // ---- 其它 ----
         QString avatarOtherBg;
         QString avatarOtherFg;
+        QString badgeBg;              // 未读徽章背景
+        QString badgeFg;              // 未读徽章文字
         QString scrollHandle;
         QString scrollHandleHover;
         QString splitterBg;
