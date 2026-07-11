@@ -69,6 +69,8 @@
 
 `install.sh` 仅支持具有 `apt-get` 的 Debian/Ubuntu 系发行版。Fedora、Arch Linux 等系统需手动安装上表对应组件。
 
+> **WSL/WSLg 兼容性提示**：Windows 与原生 Ubuntu 在窗口装饰、菜单栏尺寸、显示缩放和窗口状态管理方面存在差异。本项目使用自定义无边框窗口和全屏切换，在 WSL/WSLg 中可能出现全屏尺寸、位置或菜单栏布局异常。WSL 适合构建与基础联调；如需完整、稳定的图形界面和全屏体验，建议在原生 Ubuntu 桌面环境中运行。
+
 ### 安装依赖
 
 ```bash
