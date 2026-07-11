@@ -369,6 +369,15 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
             if (me->button() == Qt::LeftButton) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+                // Let the window system move the top-level window. Compositors such as
+                // Wayland intentionally ignore client-side move() requests.
+                if (QWindow *window = windowHandle(); window && window->startSystemMove()) {
+                    dragging_ = false;
+                    titleBar_->setCursor(CursorManager::instance().move());
+                    return true;
+                }
+#endif
                 dragStartPos_ = me->globalPos() - frameGeometry().topLeft();
                 dragging_ = true;
                 titleBar_->setCursor(CursorManager::instance().move());
