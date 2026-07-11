@@ -363,7 +363,17 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
     const bool inTitleBar = titleBar_ != nullptr
         && w != nullptr
         && (w == titleBar_ || titleBar_->isAncestorOf(w));
-    const bool titleBarAction = inTitleBar && qobject_cast<QAbstractButton *>(w) == nullptr;
+    const bool resizePointerEvent = event->type() == QEvent::MouseMove
+        || event->type() == QEvent::MouseButtonPress;
+    Qt::Edges pointerEdges;
+    if (resizePointerEvent && w && !maximized_ && isAncestorOf(w)) {
+        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+        pointerEdges = calcEdge(mapFromGlobal(me->globalPos()), size());
+    }
+    const bool titleBarAction = inTitleBar
+        && qobject_cast<QAbstractButton *>(w) == nullptr
+        && !resizing_
+        && pointerEdges == 0;
 
     if (titleBarAction) {
         if (event->type() == QEvent::MouseButtonPress) {
@@ -400,19 +410,27 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
         }
     }
 
-    if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress) {
+    if (resizePointerEvent) {
         if (w && !maximized_ && isAncestorOf(w)) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
-            const QPoint local = mapFromGlobal(me->globalPos());
             if (event->type() == QEvent::MouseMove) {
                 if (resizing_) {
                     setGeometry(resizedGeometry(me->globalPos()));
                     return true;
                 }
-                setEdgeCursor(calcEdge(local, size()));
+                setEdgeCursor(pointerEdges);
             } else if (me->button() == Qt::LeftButton) {
-                Qt::Edges e = calcEdge(local, size());
+                Qt::Edges e = pointerEdges;
                 if (e != 0) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+                    // Native resizing lets the compositor update both the size and the
+                    // window position when dragging the left or top edge.
+                    if (QWindow *window = windowHandle(); window && window->startSystemResize(e)) {
+                        resizing_ = false;
+                        resizeEdges_ = Qt::Edges();
+                        return true;
+                    }
+#endif
                     resizeEdges_ = e;
                     resizeStartPos_ = me->globalPos();
                     resizeStartGeometry_ = geometry();
