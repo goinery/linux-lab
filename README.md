@@ -56,20 +56,52 @@
 
 ## 快速开始
 
-### 环境要求
+### 前置需求
 
-- Linux（Ubuntu / Debian 系优先）
-- Qt5（Core / Widgets / Network）
-- CMake ≥ 3.16
-- C++17 编译器（g++ / clang++）
+| 类别 | 要求 | 说明 |
+| --- | --- | --- |
+| 操作系统 | Linux | 构建可在无界面环境完成；运行 GUI 需要 X11、Wayland 或 WSLg/X Server |
+| 构建工具 | CMake ≥ 3.16、Make | `install.sh` 默认使用 Debian/Ubuntu 的 `build-essential` 和 `cmake` |
+| 编译器 | 支持 C++17 的 g++ / clang++ | 当前主要验证 g++ |
+| Qt 开发包 | Qt5 Core / Widgets / Network | Debian/Ubuntu 对应 `qtbase5-dev` 和 `qtbase5-dev-tools` |
+| 运行时 | fontconfig | 用于系统字体查找；项目已内嵌中文字体 |
+| 可选增强 | 系统 CJK 字体、ibus 或 fcitx5 | 仅在需要系统字体回退或中文输入时安装 |
+
+`install.sh` 仅支持具有 `apt-get` 的 Debian/Ubuntu 系发行版。Fedora、Arch Linux 等系统需手动安装上表对应组件。
 
 ### 安装依赖
 
 ```bash
+# 仅安装必需的构建/运行依赖
 bash install.sh
+
+# 查看可用选项
+bash install.sh --help
+
+# 安装系统 CJK 回退字体
+bash install.sh --with-fonts
+
+# 二选一：安装中文输入法
+bash install.sh --with-ibus
+bash install.sh --with-fcitx5
+
+# 核心依赖 + 系统字体 + ibus
+bash install.sh --full
+
+# 仅检查环境，不访问网络、不需要 root/sudo
+bash install.sh --check
 ```
 
-`install.sh` 会安装 Qt5 开发包、CMake、build-essential，以及中文字体（`fonts-noto-cjk`、`fonts-wqy-microhei`）和 ibus 输入法组件。
+默认核心包为 `build-essential`、`cmake`、`qtbase5-dev`、`qtbase5-dev-tools`、`qt5-qmake` 和 `fontconfig`。脚本不再强制安装某一种输入法，避免覆盖或干扰用户现有的 ibus/fcitx 配置。
+
+### 权限与运行注意事项
+
+- 推荐以普通用户执行 `bash install.sh`，不要直接使用 `sudo bash install.sh`。脚本只在 `apt-get update/install` 时调用 `sudo`，并会先执行 `sudo -v` 验证权限。
+- 安装依赖需要 sudo/root 权限、可用的软件源与网络连接。`--check` 模式不修改系统，也不需要 sudo。
+- 依赖安装完成后，构建和运行程序都应使用普通用户。默认端口 `8888` 不需要特权；不建议使用小于 `1024` 的端口。
+- 服务端会在当前工作目录读写 `users.json`，因此请从普通用户可写目录启动，不要在 `/usr/bin` 等系统目录中运行服务端。
+- 局域网客户端需连接服务端的 TCP 端口；如系统启用防火墙，需由管理员放行实际使用的端口。脚本不会自动修改防火墙。
+- 安装输入法包后，仍需在桌面环境中选择 ibus/fcitx5 并重新登录图形会话；脚本不会修改用户的会话环境变量。
 
 ### 构建与运行
 
@@ -310,7 +342,7 @@ PY
 ## 常见问题
 
 **Q：界面显示方框（tofu）？**
-确认 `resources/fonts/HuaweiSans-Regular.ttf` 存在并重新 `cmake + build`；或在目标机器执行 `bash install.sh` 安装系统 CJK 字体作为兜底。可用 `QT_QPA_PLATFORM=offscreen ./build/bin/chatroom --help 2>&1 | grep "embedded font"` 检查是否命中内嵌字体。
+确认 `resources/fonts/HuaweiSans-Regular.ttf` 存在并重新 `cmake + build`；或在目标机器执行 `bash install.sh --with-fonts` 安装系统 CJK 字体作为兜底。可用 `QT_QPA_PLATFORM=offscreen ./build/bin/chatroom --help 2>&1 | grep "embedded font"` 检查是否命中内嵌字体。
 
 **Q：能运行但字体不一致？**
 程序会优先使用内嵌字体。如需统一为系统字体，安装对应字体包即可。
@@ -319,10 +351,10 @@ PY
 确认运行的是最新构建产物 `./build/bin/chatroom`，并检查服务端日志是否出现 `QSocketNotifier: Invalid socket` 等异常。
 
 **Q：中文输入法无法使用？**
-确保图形会话已重新登录，并检查环境变量 `QT_IM_MODULE` / `XMODIFIERS`。ibus 用户可执行 `ibus-daemon -drx`。
+先根据桌面环境选择一种输入法：`bash install.sh --with-ibus` 或 `bash install.sh --with-fcitx5`。安装后在系统设置中启用对应输入法并重新登录图形会话，再检查 `QT_IM_MODULE` / `XMODIFIERS`。不要同时强制设置 ibus 和 fcitx5。
 
 **Q：换机器后显示异常？**
-优先携带 `resources/fonts/` 字体重建；或执行 `install.sh` 安装系统中文字体兜底。
+优先携带 `resources/fonts/` 字体重建；或执行 `bash install.sh --with-fonts` 安装系统中文字体兜底。
 
 ---
 
