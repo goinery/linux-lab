@@ -306,7 +306,7 @@ ls -lh *.deb        # 产出 chatroom-1.0.0-Linux.deb
 
 ## 测试
 
-完整测试计划见 [`TESTING.md`](TESTING.md)。常用冒烟测试：
+常用冒烟测试：
 
 ```bash
 # 1. 无界面字体检查（确认命中内嵌字体）
@@ -365,9 +365,7 @@ PY
 ├── CMakeLists.txt              # 顶层构建配置 + CPack 打包
 ├── CMakePresets.json            # WSL Debug 预设
 ├── install.sh                   # 依赖安装脚本
-├── TESTING.md                   # 完整测试计划
-├── UI_DESIGN.md                 # UI 设计说明
-├── users.json                   # 用户数据（运行时生成）
+├── users.json                   # 用户数据（运行时生成，Git 忽略）
 ├── resources/
 │   ├── style.qss                # 基础样式
 │   ├── themes/template.qss      # 主题模板（结构 + 选择器）
