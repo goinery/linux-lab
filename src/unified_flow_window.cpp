@@ -125,9 +125,7 @@ void UnifiedFlowWindow::onNextClicked() {
 }
 
 void UnifiedFlowWindow::onBackToStart() {
-    if (client_->isConnected()) {
-        client_->disconnectFromServer();
-    }
+    client_->disconnectFromServer();
     pendingAuthType_ = None;
     authStatusLabel_->setText("");
     setCurrentPage(startupPage_, "启动页");
@@ -150,8 +148,9 @@ void UnifiedFlowWindow::onAuthAction() {
     if (loginModeRadio_->isChecked()) {
         const QString user = loginUserEdit_->text().trimmed();
         const QString pass = loginPassEdit_->text();
-        if (user.isEmpty() || pass.isEmpty()) {
-            setStatus(authStatusLabel_, "请输入用户名和密码", "error");
+        if (user.length() < 2 || user.length() > 32
+            || pass.length() < 4 || pass.length() > 128) {
+            setStatus(authStatusLabel_, "用户名需为2-32个字符，密码需为4-128个字符", "error");
             return;
         }
         pendingAuthType_ = Login;
@@ -161,12 +160,12 @@ void UnifiedFlowWindow::onAuthAction() {
         const QString user = regUserEdit_->text().trimmed();
         const QString pass = regPassEdit_->text();
         const QString confirm = regConfirmEdit_->text();
-        if (user.length() < 2) {
-            setStatus(authStatusLabel_, "用户名至少2个字符", "error");
+        if (user.length() < 2 || user.length() > 32) {
+            setStatus(authStatusLabel_, "用户名需为2-32个字符", "error");
             return;
         }
-        if (pass.length() < 4) {
-            setStatus(authStatusLabel_, "密码至少4个字符", "error");
+        if (pass.length() < 4 || pass.length() > 128) {
+            setStatus(authStatusLabel_, "密码需为4-128个字符", "error");
             return;
         }
         if (pass != confirm) {
@@ -186,7 +185,16 @@ void UnifiedFlowWindow::onClientConnected() {
 
 void UnifiedFlowWindow::onClientDisconnected() {
     authActionButton_->setEnabled(false);
-    setStatus(authStatusLabel_, "已断开连接", "error");
+    client_->setUsername({});
+    if (chatPage_) {
+        pages_->removeWidget(chatPage_);
+        chatPage_->deleteLater();
+        chatPage_ = nullptr;
+    }
+    setStatus(authStatusLabel_, "连接已断开；可返回启动页，或等待重连后重新登录", "error");
+    if (pages_->currentWidget() != startupPage_) {
+        setCurrentPage(authPage_, "客户端认证");
+    }
 }
 
 void UnifiedFlowWindow::onClientError(const QString &err) {
@@ -269,9 +277,9 @@ void UnifiedFlowWindow::onServerMutedUpdated(const QStringList &mutedUsers) {
     }
 }
 
-void UnifiedFlowWindow::onServerStatsUpdated(int totalConnections, int totalMessages,
+void UnifiedFlowWindow::onServerStatsUpdated(int activeConnections, int totalMessages,
                                              const QString &uptime) {
-    serverConnectionsLabel_->setText(QString("连接数: %1").arg(totalConnections));
+    serverConnectionsLabel_->setText(QString("当前连接: %1").arg(activeConnections));
     serverMessagesLabel_->setText(QString("消息数: %1").arg(totalMessages));
     serverUptimeLabel_->setText(QString("运行时间: %1").arg(uptime));
 }

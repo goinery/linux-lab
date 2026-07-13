@@ -45,7 +45,7 @@ private slots:
     void onWinClose();
     void onServerUsersUpdated(const QStringList &users);
     void onServerMutedUpdated(const QStringList &mutedUsers);
-    void onServerStatsUpdated(int totalConnections, int totalMessages,
+    void onServerStatsUpdated(int activeConnections, int totalMessages,
                               const QString &uptime);
     void onServerLogUpdated(const QString &entry);
 

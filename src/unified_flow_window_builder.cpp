@@ -4,6 +4,7 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QIntValidator>
 #include <QMenu>
 #include <QMessageBox>
 #include <QScrollArea>
@@ -116,7 +117,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
     disconnectSideBtn_->setCursor(CursorManager::instance().hand());
     disconnectSideBtn_->setFixedSize(56, 40);
     connect(disconnectSideBtn_, &QPushButton::clicked, this, [this]() {
-        if (client_->isConnected()) client_->permanentDisconnect();
+        client_->disconnectFromServer();
         stopServerIfRunning();
         setStatus(startupStatusLabel_, "服务端已停止", "info");
         serverLogList_->clear();
@@ -133,7 +134,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         box.setText("<h1 style='margin:0;'>✦ ChatRoom v1.0</h1>");
         box.setInformativeText(
             "<p style='font-size:13px;line-height:1.8;'>"
-            "现代化多线程图形界面聊天室<br>"
+            "现代化局域网图形界面聊天室<br>"
             "基于 <b>Qt + CMake</b> 构建 · 多主题切换</p>"
             "<hr>"
             "<p style='font-size:12px;'>"
@@ -208,6 +209,8 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         serverLayout->setContentsMargins(0, 0, 0, 0);
         QLabel *serverPortTitle = new QLabel("服务端口");
         serverPortEdit_ = new QLineEdit(QString::number(defaultPort));
+        serverPortEdit_->setValidator(new QIntValidator(1, 65535, serverPortEdit_));
+        serverPortEdit_->setMaxLength(5);
         serverPortEdit_->setCursor(CursorManager::instance().ibeam());
         serverLayout->addWidget(serverPortTitle);
         serverLayout->addWidget(serverPortEdit_);
@@ -219,6 +222,9 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         clientLayout->addWidget(new QLabel("服务端口"), 0, 1);
         clientHostEdit_ = new QLineEdit(defaultHost);
         clientPortEdit_ = new QLineEdit(QString::number(defaultPort));
+        clientHostEdit_->setMaxLength(255);
+        clientPortEdit_->setValidator(new QIntValidator(1, 65535, clientPortEdit_));
+        clientPortEdit_->setMaxLength(5);
         clientHostEdit_->setCursor(CursorManager::instance().ibeam());
         clientPortEdit_->setCursor(CursorManager::instance().ibeam());
         clientLayout->addWidget(clientHostEdit_, 1, 0);
@@ -261,7 +267,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
 
         QHBoxLayout *statsRow = new QHBoxLayout;
         statsRow->setSpacing(16);
-        serverConnectionsLabel_ = new QLabel("连接数: 0");
+        serverConnectionsLabel_ = new QLabel("当前连接: 0");
         serverMessagesLabel_ = new QLabel("消息数: 0");
         serverUptimeLabel_ = new QLabel("运行时间: -");
         statsRow->addWidget(serverConnectionsLabel_);
@@ -291,6 +297,7 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         QHBoxLayout *broadcastRow = new QHBoxLayout;
         broadcastRow->setSpacing(6);
         serverBroadcastEdit_ = new QLineEdit;
+        serverBroadcastEdit_->setMaxLength(4096);
         serverBroadcastEdit_->setPlaceholderText("输入公告内容...");
         serverBroadcastEdit_->setCursor(CursorManager::instance().ibeam());
         QPushButton *broadcastButton = new QPushButton("发送公告");
@@ -376,6 +383,8 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         loginLayout->addWidget(new QLabel("密码"), 0, 1);
         loginUserEdit_ = new QLineEdit;
         loginPassEdit_ = new QLineEdit;
+        loginUserEdit_->setMaxLength(32);
+        loginPassEdit_->setMaxLength(128);
         loginUserEdit_->setCursor(CursorManager::instance().ibeam());
         loginPassEdit_->setCursor(CursorManager::instance().ibeam());
         loginPassEdit_->setEchoMode(QLineEdit::Password);
@@ -390,6 +399,9 @@ void UnifiedFlowWindow::buildUi(const QString &defaultHost, quint16 defaultPort,
         regUserEdit_ = new QLineEdit;
         regPassEdit_ = new QLineEdit;
         regConfirmEdit_ = new QLineEdit;
+        regUserEdit_->setMaxLength(32);
+        regPassEdit_->setMaxLength(128);
+        regConfirmEdit_->setMaxLength(128);
         regUserEdit_->setCursor(CursorManager::instance().ibeam());
         regPassEdit_->setCursor(CursorManager::instance().ibeam());
         regConfirmEdit_->setCursor(CursorManager::instance().ibeam());

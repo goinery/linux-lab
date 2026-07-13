@@ -12,7 +12,6 @@
 #include <QKeySequence>
 #include <QStatusBar>
 #include <QResizeEvent>
-#include <QKeyEvent>
 #include <QPointer>
 #include <QTimer>
 #include <QSizePolicy>
@@ -202,17 +201,9 @@ int MainWindow::bubbleMaxWidthForChat(const QString &chatName) const {
     return qBound(120, preferredWidth, availableWidth);
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event) {
-    QMainWindow::keyPressEvent(event);
-}
-
 void MainWindow::resizeEvent(QResizeEvent *event) {
     QMainWindow::resizeEvent(event);
     updateBubbleMaxWidth();
-}
-
-bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
-    return QMainWindow::eventFilter(obj, event);
 }
 
 QWidget *MainWindow::createChatPage(const QString &name) {
@@ -266,6 +257,14 @@ void MainWindow::flushPendingMessagesForChat(const QString &chatName) {
 void MainWindow::onSendClicked() {
     QString text = inputEdit_->toPlainText().trimmed();
     if (text.isEmpty()) return;
+    if (!client_->isConnected()) {
+        statusLabel_->setText("当前未连接服务器，消息未发送");
+        return;
+    }
+    if (text.size() > 4096) {
+        statusLabel_->setText("消息过长，最多允许 4096 个字符");
+        return;
+    }
 
     if (currentChat_ == "general") {
         client_->sendMessage(Protocol::createGroupChatMessage(client_->username(), text));
@@ -275,6 +274,7 @@ void MainWindow::onSendClicked() {
 
     inputEdit_->clear();
     inputEdit_->setFocus();
+    statusLabel_->setText("消息已发送");
 }
 
 void MainWindow::onUserItemClicked(QListWidgetItem *item) {

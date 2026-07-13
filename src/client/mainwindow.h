@@ -24,9 +24,7 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(ChatClient *client, QWidget *parent = nullptr);
 protected:
-    void keyPressEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
-    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void onSendClicked();

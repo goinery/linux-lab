@@ -38,14 +38,11 @@ void MainWindow::setupMenuBar() {
     connect(aboutAction, &QAction::triggered, this, [this]() {
         QMessageBox::about(this, "关于 ChatRoom",
             "<h2>ChatRoom v1.0</h2>"
-            "<p>现代化多线程图形界面聊天室</p>"
+            "<p>现代化局域网图形界面聊天室</p>"
             "<p>基于 Qt + CMake 构建</p>"
             "<hr>"
             "<p><b>快捷键：</b></p>"
             "<p>F11 - 全屏切换</p>"
-            "<p>Ctrl++ / Ctrl+= - 放大</p>"
-            "<p>Ctrl+- - 缩小</p>"
-            "<p>Ctrl+0 - 重置缩放</p>"
             "<p>Ctrl+Enter - 发送消息</p>");
     });
 }
@@ -87,6 +84,11 @@ void MainWindow::onUserListReceived(const QJsonArray &users) {
     if (!selectedRestored && userListWidget_->count() > 0) {
         userListWidget_->item(0)->setSelected(true);
         currentChat_ = "general";
+        if (chatPages_.contains("general")) {
+            chatStack_->setCurrentWidget(chatPages_["general"]);
+        }
+        chatTitleLabel_->setText("群聊");
+        clearUnread("general");
     }
 }
 

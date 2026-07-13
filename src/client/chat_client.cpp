@@ -3,9 +3,11 @@
 #include "constants.h"
 
 ChatClient::ChatClient(QObject *parent)
-    : QObject(parent), port_(0), reconnecting_(false), reconnectAttempts_(0) {
+    : QObject(parent), port_(0), autoReconnectEnabled_(false), reconnectAttempts_(0) {
     socket_ = new QTcpSocket(this);
     heartbeatTimer_ = new QTimer(this);
+    reconnectTimer_ = new QTimer(this);
+    reconnectTimer_->setSingleShot(true);
 
     connect(socket_, &QTcpSocket::connected, this, &ChatClient::onConnected);
     connect(socket_, &QTcpSocket::readyRead, this, &ChatClient::onReadyRead);
@@ -13,6 +15,7 @@ ChatClient::ChatClient(QObject *parent)
     connect(socket_, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::errorOccurred),
             this, &ChatClient::onError);
     connect(heartbeatTimer_, &QTimer::timeout, this, &ChatClient::onHeartbeat);
+    connect(reconnectTimer_, &QTimer::timeout, this, &ChatClient::onReconnectTimeout);
 }
 
 ChatClient::~ChatClient() {
@@ -20,33 +23,47 @@ ChatClient::~ChatClient() {
 }
 
 void ChatClient::connectToServer(const QString &host, quint16 port) {
-    host_ = host;
+    if (host.trimmed().isEmpty() || port == 0) {
+        emit errorOccurred("服务器地址或端口无效");
+        return;
+    }
+
+    autoReconnectEnabled_ = false;
+    heartbeatTimer_->stop();
+    reconnectTimer_->stop();
+    if (socket_->state() != QAbstractSocket::UnconnectedState) {
+        socket_->abort();
+    }
+
+    host_ = host.trimmed();
     port_ = port;
+    buffer_.clear();
     reconnectAttempts_ = 0;
-    socket_->connectToHost(host, port);
+    autoReconnectEnabled_ = true;
+    socket_->connectToHost(host_, port_);
 }
 
 void ChatClient::disconnectFromServer() {
+    autoReconnectEnabled_ = false;
     heartbeatTimer_->stop();
-    reconnecting_ = false;
+    reconnectTimer_->stop();
+    buffer_.clear();
+    username_.clear();
     if (socket_->state() != QAbstractSocket::UnconnectedState) {
-        socket_->disconnectFromHost();
-    }
-}
-
-void ChatClient::permanentDisconnect() {
-    heartbeatTimer_->stop();
-    reconnecting_ = false;
-    reconnectAttempts_ = Constants::MAX_RECONNECT_ATTEMPTS;
-    if (socket_->state() != QAbstractSocket::UnconnectedState) {
-        socket_->disconnectFromHost();
+        if (socket_->state() == QAbstractSocket::ConnectedState) {
+            socket_->disconnectFromHost();
+        } else {
+            socket_->abort();
+        }
     }
 }
 
 void ChatClient::sendMessage(const QJsonObject &message) {
     if (socket_->state() == QAbstractSocket::ConnectedState) {
-        socket_->write(Protocol::serializeMessage(message));
-        socket_->flush();
+        const QByteArray frame = Protocol::serializeMessage(message);
+        if (!frame.isEmpty()) {
+            socket_->write(frame);
+        }
     }
 }
 
@@ -55,42 +72,71 @@ bool ChatClient::isConnected() const {
 }
 
 void ChatClient::onConnected() {
+    buffer_.clear();
     reconnectAttempts_ = 0;
-    reconnecting_ = false;
+    reconnectTimer_->stop();
     heartbeatTimer_->start(Constants::HEARTBEAT_INTERVAL);
     emit connected();
 }
 
 void ChatClient::onReadyRead() {
     buffer_.append(socket_->readAll());
-    QJsonObject json;
-    while (Protocol::deserializeMessage(buffer_, json)) {
-        emit messageReceived(json);
+    while (true) {
+        QJsonObject json;
+        QString errorMessage;
+        const Protocol::DecodeStatus status =
+            Protocol::deserializeMessage(buffer_, json, &errorMessage);
+        if (status == Protocol::DecodeStatus::Complete) {
+            emit messageReceived(json);
+            continue;
+        }
+        if (status == Protocol::DecodeStatus::Invalid) {
+            emit errorOccurred("服务端协议错误: " + errorMessage);
+            autoReconnectEnabled_ = false;
+            socket_->abort();
+        }
+        break;
     }
 }
 
 void ChatClient::onDisconnected() {
     heartbeatTimer_->stop();
+    buffer_.clear();
+    username_.clear();
     emit disconnected();
-    attemptReconnect();
+    scheduleReconnect();
 }
 
-void ChatClient::onError(QAbstractSocket::SocketError error) {
-    Q_UNUSED(error)
+void ChatClient::onError(QAbstractSocket::SocketError) {
     emit errorOccurred(socket_->errorString());
+    if (socket_->state() == QAbstractSocket::UnconnectedState) {
+        scheduleReconnect();
+    }
 }
 
 void ChatClient::onHeartbeat() {
     sendMessage(Protocol::createHeartbeat());
 }
 
-void ChatClient::attemptReconnect() {
-    if (reconnectAttempts_ >= Constants::MAX_RECONNECT_ATTEMPTS) return;
-    reconnecting_ = true;
-    reconnectAttempts_++;
-    QTimer::singleShot(Constants::RECONNECT_INTERVAL, this, [this]() {
-        if (reconnecting_) {
-            socket_->connectToHost(host_, port_);
-        }
-    });
+void ChatClient::scheduleReconnect() {
+    if (!autoReconnectEnabled_ || reconnectTimer_->isActive()
+        || socket_->state() != QAbstractSocket::UnconnectedState) {
+        return;
+    }
+    if (reconnectAttempts_ >= Constants::MAX_RECONNECT_ATTEMPTS) {
+        autoReconnectEnabled_ = false;
+        emit errorOccurred(QString("重连失败，已达到最大尝试次数 %1")
+                           .arg(Constants::MAX_RECONNECT_ATTEMPTS));
+        return;
+    }
+
+    ++reconnectAttempts_;
+    reconnectTimer_->start(Constants::RECONNECT_INTERVAL);
+}
+
+void ChatClient::onReconnectTimeout() {
+    if (!autoReconnectEnabled_ || socket_->state() != QAbstractSocket::UnconnectedState) {
+        return;
+    }
+    socket_->connectToHost(host_, port_);
 }
