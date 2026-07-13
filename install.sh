@@ -10,11 +10,6 @@ readonly -a REQUIRED_PACKAGES=(
     qtbase5-dev
     qtbase5-dev-tools
     qt5-qmake
-    fontconfig
-)
-readonly -a FONT_PACKAGES=(
-    fonts-noto-cjk
-    fonts-wqy-microhei
 )
 readonly -a IBUS_PACKAGES=(
     ibus
@@ -26,7 +21,6 @@ readonly -a FCITX5_PACKAGES=(
     fcitx5-frontend-qt5
 )
 
-install_fonts=false
 input_method="none"
 run_apt_update=true
 check_only=false
@@ -40,10 +34,8 @@ usage() {
 
 选项:
   --check             仅检查当前环境，不更新软件源，不安装任何包
-  --with-fonts        安装 Noto CJK 和文泉驿字体（可选系统回退字体）
   --with-ibus         安装 ibus 及中文拼音引擎
   --with-fcitx5       安装 fcitx5、中文扩展和 Qt5 前端
-  --full              安装核心依赖、系统 CJK 字体和 ibus
   --no-update         跳过 apt-get update（仅在本地软件包索引可用时使用）
   -h, --help          显示本帮助
 
@@ -78,7 +70,7 @@ verify_environment() {
 
     local -a missing_commands=()
     local command_name
-    for command_name in cmake c++ make qmake fc-list; do
+    for command_name in cmake c++ make qmake; do
         if ! command -v "$command_name" >/dev/null 2>&1; then
             missing_commands+=("$command_name")
         fi
@@ -116,20 +108,9 @@ verify_environment() {
     printf 'C++: %s\n' "$(c++ --version | sed -n '1p')"
     printf 'Qt5 Core/Widgets/Network: 可用\n'
 
-    if find "$SCRIPT_DIR/resources/fonts" -maxdepth 1 -type f \
-        \( -name '*.ttf' -o -name '*.ttc' -o -name '*.otf' \) -print -quit \
-        | grep -q .; then
-        printf '内嵌字体资源: 已找到\n'
-    else
-        printf '内嵌字体资源: 未找到（建议使用 --with-fonts）\n'
-    fi
-
-    if [[ "$install_fonts" == true ]]; then
-        local system_cjk_font
-        system_cjk_font="$(fc-list :lang=zh family | sed -n '1p')"
-        [[ -n "$system_cjk_font" ]] || die "未检测到系统 CJK 字体"
-        printf '系统 CJK 字体: %s\n' "$system_cjk_font"
-    fi
+    [[ -f "$SCRIPT_DIR/resources/fonts/font.ttf" ]] \
+        || die "缺少项目字体 resources/fonts/font.ttf"
+    printf '项目内嵌字体: resources/fonts/font.ttf\n'
 
     if [[ "$input_method" == "ibus" ]]; then
         command -v ibus >/dev/null 2>&1 || die "ibus 未正确安装"
@@ -143,18 +124,11 @@ while (($# > 0)); do
     --check)
         check_only=true
         ;;
-    --with-fonts)
-        install_fonts=true
-        ;;
     --with-ibus)
         set_input_method "ibus"
         ;;
     --with-fcitx5)
         set_input_method "fcitx5"
-        ;;
-    --full)
-        install_fonts=true
-        set_input_method "ibus"
         ;;
     --no-update)
         run_apt_update=false
@@ -197,9 +171,6 @@ else
 fi
 
 declare -a packages=("${REQUIRED_PACKAGES[@]}")
-if [[ "$install_fonts" == true ]]; then
-    packages+=("${FONT_PACKAGES[@]}")
-fi
 if [[ "$input_method" == "ibus" ]]; then
     packages+=("${IBUS_PACKAGES[@]}")
 elif [[ "$input_method" == "fcitx5" ]]; then

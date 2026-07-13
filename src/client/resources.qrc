@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="style.qss">../../resources/style.qss</file>
         <file alias="theme_template.qss">../../resources/themes/template.qss</file>
     </qresource>
     <qresource prefix="/cursors">
@@ -12,5 +11,8 @@
         <file alias="cursor_size_bdiag.png">../../resources/cursors/cursor_size_bdiag.png</file>
         <file alias="cursor_move..png">../../resources/cursors/cursor_move..png</file>
         <file alias="cursor_ibeam.png">../../resources/cursors/cursor_ibeam.png</file>
+    </qresource>
+    <qresource prefix="/fonts">
+        <file alias="font.ttf">../../resources/fonts/font.ttf</file>
     </qresource>
 </RCC>

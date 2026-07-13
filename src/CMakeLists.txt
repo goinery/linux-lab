@@ -8,7 +8,6 @@ set(SERVER_SOURCES
     server/chat_server.cpp
     server/client_handler.h
     server/client_handler.cpp
-    server/thread_pool.h
     server/user_manager.h
     server/user_manager.cpp
 )
@@ -19,34 +18,18 @@ set(CLIENT_SOURCES
     client/mainwindow.h
     client/mainwindow.cpp
     client/mainwindow_userlist.cpp
-    client/login_dialog.h
-    client/login_dialog.cpp
     client/message_widget.h
     client/message_widget.cpp
     client/resources.qrc
 )
 
-file(GLOB CHATROOM_EMBED_FONT_FILES
-    "${CMAKE_SOURCE_DIR}/resources/fonts/*.ttf"
-    "${CMAKE_SOURCE_DIR}/resources/fonts/*.ttc"
-    "${CMAKE_SOURCE_DIR}/resources/fonts/*.otf"
-)
-
-if(CHATROOM_EMBED_FONT_FILES)
-    set(CHATROOM_FONT_QRC "${CMAKE_CURRENT_BINARY_DIR}/embedded_fonts.qrc")
-    file(WRITE "${CHATROOM_FONT_QRC}" "<RCC>\n    <qresource prefix=\"/fonts\">\n")
-
-    foreach(FONT_FILE IN LISTS CHATROOM_EMBED_FONT_FILES)
-        get_filename_component(FONT_NAME "${FONT_FILE}" NAME)
-        file(APPEND "${CHATROOM_FONT_QRC}" "        <file alias=\"${FONT_NAME}\">${FONT_FILE}</file>\n")
-    endforeach()
-
-    file(APPEND "${CHATROOM_FONT_QRC}" "    </qresource>\n</RCC>\n")
-    list(APPEND CLIENT_SOURCES "${CHATROOM_FONT_QRC}")
-    message(STATUS "Embedding chatroom fonts: ${CHATROOM_EMBED_FONT_FILES}")
-else()
-    message(STATUS "No font files found under resources/fonts/. Using system fonts fallback.")
+set(CHATROOM_FONT_FILE "${CMAKE_SOURCE_DIR}/resources/fonts/font.ttf")
+if(NOT EXISTS "${CHATROOM_FONT_FILE}")
+    message(FATAL_ERROR
+        "Required bundled font is missing: ${CHATROOM_FONT_FILE}. "
+        "Restore resources/fonts/font.ttf before building.")
 endif()
+message(STATUS "Embedding chatroom font: ${CHATROOM_FONT_FILE}")
 
 add_executable(${CHATROOM_PROGRAM_NAME}
     main.cpp
@@ -80,3 +63,11 @@ target_link_libraries(${CHATROOM_PROGRAM_NAME} PRIVATE
 target_compile_definitions(${CHATROOM_PROGRAM_NAME} PRIVATE
     APP_VERSION_STR="${PROJECT_VERSION}"
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(${CHATROOM_PROGRAM_NAME} PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+    )
+endif()

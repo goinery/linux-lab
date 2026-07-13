@@ -5,17 +5,6 @@
 
 namespace {
 
-/// 共享的字体族（LXGW 等比例衬线）。素白主题使用华为字体优先。
-const QString FONT_DEFAULT = QStringLiteral(
-    "\"LXGW WenKai\", \"Huawei Sans\", \"Noto Sans CJK SC\", \"Noto Sans SC\", "
-    "\"WenQuanYi Micro Hei\", \"WenQuanYi Zen Hei\", \"Source Han Sans CN\", "
-    "\"Microsoft YaHei\", \"Segoe UI\", \"PingFang SC\", sans-serif");
-
-const QString FONT_GRAY = QStringLiteral(
-    "\"Huawei Sans\", \"LXGW WenKai\", \"Noto Sans CJK SC\", \"Noto Sans SC\", "
-    "\"WenQuanYi Micro Hei\", \"WenQuanYi Zen Hei\", \"Source Han Sans CN\", "
-    "\"Microsoft YaHei\", \"Segoe UI\", \"PingFang SC\", sans-serif");
-
 // ===== 主题工厂 ============================================================
 // 修改某主题颜色 → 编辑下方对应函数中的字段值即可。
 // 新增主题 → 复制其中一个函数，调整配色，并加入 palettes() 列表。
@@ -24,8 +13,6 @@ ThemeManager::ThemePalette grayPalette() {
     ThemeManager::ThemePalette p;
     p.id   = QStringLiteral("gray");
     p.name = QStringLiteral("素白");
-    p.fontFamily = FONT_GRAY;
-
     p.primary       = "#5c6bc0";
     p.primaryHover  = "#4a5ab0";
     p.primaryDark   = "#3a4aa0";
@@ -105,8 +92,6 @@ ThemeManager::ThemePalette mintPalette() {
     ThemeManager::ThemePalette p;
     p.id   = QStringLiteral("mint");
     p.name = QStringLiteral("森氧");
-    p.fontFamily = FONT_DEFAULT;
-
     p.primary       = "#5c9b6f";
     p.primaryHover  = "#4d8b60";
     p.primaryDark   = "#4a8760";
@@ -186,8 +171,6 @@ ThemeManager::ThemePalette skyPalette() {
     ThemeManager::ThemePalette p;
     p.id   = QStringLiteral("sky");
     p.name = QStringLiteral("云海");
-    p.fontFamily = FONT_DEFAULT;
-
     p.primary       = "#4a8fd4";
     p.primaryHover  = "#3b7ec2";
     p.primaryDark   = "#3c7bc0";
@@ -267,8 +250,6 @@ ThemeManager::ThemePalette nightPalette() {
     ThemeManager::ThemePalette p;
     p.id   = QStringLiteral("night");
     p.name = QStringLiteral("夜航");
-    p.fontFamily = FONT_DEFAULT;
-
     p.primary       = "#2d9eb6";
     p.primaryHover  = "#268ea5";
     p.primaryDark   = "#268ca3";
@@ -387,8 +368,6 @@ QString ThemeManager::render(const ThemePalette &p) {
 
     // 单一映射表：每新增一个 token，仅需在 ThemePalette 加字段并在此追加一行。
     const QVector<QPair<QString, QString>> tokens = {
-        { "@fontFamily@",            p.fontFamily },
-
         { "@primary@",               p.primary },
         { "@primaryHover@",          p.primaryHover },
         { "@primaryDark@",           p.primaryDark },

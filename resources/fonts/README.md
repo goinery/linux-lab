@@ -1,20 +1,10 @@
-# Embedded font guide
+# 项目内嵌字体
 
-Place a CJK font file in this directory to embed it into the `chatroom` executable at build time.
+ChatRoom 固定使用本目录中的 `font.ttf`：
 
-Supported file types:
-- `.ttf`
-- `.ttc`
-- `.otf`
+- CMake 将它以 `:/fonts/font.ttf` 嵌入可执行程序。
+- 程序启动时直接加载该资源，并把字体设置为全局应用字体；字体损坏或无法加载时程序会停止启动。
+- 不扫描系统字体，不在运行时联网下载字体，也不要求额外安装字体包。
+- 如果 `font.ttf` 缺失，CMake 会停止配置并给出明确错误，避免生成字体不完整的程序。
 
-Recommended embedded font priority:
-1. `HuaweiSans-Regular.ttf`
-2. `NotoSansCJKsc-Regular.otf`
-3. `NotoSansSC-Regular.otf`
-4. `NotoSansCJK-Regular.ttc`
-5. `SourceHanSansCN-Regular.otf`
-
-Build behavior:
-- If one or more font files exist here, CMake auto-generates `embedded_fonts.qrc` and embeds them.
-- Runtime scans all `.ttf/.ttc/.otf` files under `:/fonts`, then selects a preferred CJK family (Huawei Sans first).
-- If this directory is empty, the app falls back to system fonts and logs a warning at startup.
+替换字体时只需用新的 TrueType 字体覆盖 `font.ttf`，然后重新执行 CMake 配置与构建。使用第三方字体前应确认其许可证允许随项目分发。

@@ -5,12 +5,8 @@
  *   逐个 token 进行字符串替换得到最终 QSS。
  *
  * 修改"结构 / 选择器 / 布局" → 仅编辑本文件。
- * 修改"主题颜色 / 字体"      → 仅编辑 src/theme_manager.cpp 中对应 palette。
+ * 修改"主题颜色"             → 仅编辑 src/theme_manager.cpp 中对应 palette。
  * ========================================================================== */
-
-* {
-    font-family: @fontFamily@;
-}
 
 QWidget {
     font-size: 14px;

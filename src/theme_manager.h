@@ -21,9 +21,6 @@ public:
         QString id;     // 资源标识，如 "gray"
         QString name;   // 显示名，如 "素白"
 
-        // ---- 字体 ----
-        QString fontFamily;
-
         // ---- 品牌主色 ----
         QString primary;        // 主色（侧栏Logo、发送按钮、选中态、焦点边框）
         QString primaryHover;   // 主色悬停态
