@@ -9,8 +9,7 @@ ClientHandler::ClientHandler(QTcpSocket *socket, QObject *parent)
     }
 }
 
-ClientHandler::~ClientHandler() {
-}
+ClientHandler::~ClientHandler() = default;
 
 void ClientHandler::start() {
     if (!socket_) {
@@ -28,9 +27,21 @@ void ClientHandler::onReadyRead() {
     }
 
     buffer_.append(socket_->readAll());
-    QJsonObject json;
-    while (Protocol::deserializeMessage(buffer_, json)) {
-        emit messageReceived(socketDescriptor_, json);
+    while (true) {
+        QJsonObject json;
+        QString errorMessage;
+        const Protocol::DecodeStatus status =
+            Protocol::deserializeMessage(buffer_, json, &errorMessage);
+        if (status == Protocol::DecodeStatus::Complete) {
+            emit messageReceived(socketDescriptor_, json);
+            continue;
+        }
+        if (status == Protocol::DecodeStatus::Invalid) {
+            qWarning() << "Disconnecting client with invalid protocol frame:"
+                       << errorMessage;
+            socket_->disconnectFromHost();
+        }
+        break;
     }
 }
 
@@ -40,8 +51,10 @@ void ClientHandler::onDisconnected() {
 
 void ClientHandler::sendMessage(const QJsonObject &message) {
     if (socket_ && socket_->state() == QAbstractSocket::ConnectedState) {
-        socket_->write(Protocol::serializeMessage(message));
-        socket_->flush();
+        const QByteArray frame = Protocol::serializeMessage(message);
+        if (!frame.isEmpty()) {
+            socket_->write(frame);
+        }
     }
 }
 

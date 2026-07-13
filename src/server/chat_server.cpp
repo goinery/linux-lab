@@ -1,67 +1,125 @@
 #include "chat_server.h"
-#include "user_manager.h"
+
 #include "protocol.h"
-#include "constants.h"
+#include "user_manager.h"
+
+#include <QHostAddress>
 #include <QJsonArray>
+#include <QMutexLocker>
+#include <QTcpSocket>
 
-ChatServer::ChatServer(quint16 port, QObject *parent)
-    : QObject(parent), port_(port), threadPool_(4), totalConnections_(0), totalMessages_(0) {}
+namespace {
 
-ChatServer::~ChatServer() {
-    tcpServer_->close();
+constexpr int kMinUsernameLength = 2;
+constexpr int kMaxUsernameLength = 32;
+constexpr int kMinPasswordLength = 4;
+constexpr int kMaxPasswordLength = 128;
+constexpr int kMaxChatLength = 4096;
+
+QString logPrefix() {
+    return QDateTime::currentDateTime().toString(QStringLiteral("[hh:mm:ss] "));
 }
 
-bool ChatServer::start() {
-    tcpServer_ = new QTcpServer(this);
-    if (!tcpServer_->listen(QHostAddress::Any, port_)) {
-        qCritical() << "Server failed to start on port" << port_ << ":" << tcpServer_->errorString();
+bool validUsername(const QString &username) {
+    if (username != username.trimmed()
+        || username.size() < kMinUsernameLength
+        || username.size() > kMaxUsernameLength) {
         return false;
     }
-    connect(tcpServer_, &QTcpServer::newConnection, this, &ChatServer::onNewConnection);
+    for (const QChar ch : username) {
+        if (!ch.isPrint() || ch.isSpace()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool validPassword(const QString &password) {
+    return password.size() >= kMinPasswordLength
+        && password.size() <= kMaxPasswordLength;
+}
+
+} // namespace
+
+ChatServer::ChatServer(quint16 port, QObject *parent)
+    : QObject(parent), tcpServer_(new QTcpServer(this)), port_(port), totalMessages_(0) {
+    connect(tcpServer_, &QTcpServer::newConnection,
+            this, &ChatServer::onNewConnection);
+}
+
+ChatServer::~ChatServer() = default;
+
+bool ChatServer::start() {
+    if (tcpServer_->isListening()) {
+        return true;
+    }
+    if (!tcpServer_->listen(QHostAddress::Any, port_)) {
+        qCritical() << "Server failed to start on port" << port_
+                    << ":" << tcpServer_->errorString();
+        return false;
+    }
+
     startTime_ = QDateTime::currentDateTime();
+    totalMessages_ = 0;
+    appendLog(logPrefix() + QString("服务端已启动，监听端口 %1").arg(port_));
+    emitStats();
     qInfo() << "Chat server started on port" << port_;
     return true;
 }
 
 void ChatServer::stop() {
-    if (tcpServer_ && tcpServer_->isListening()) {
-        tcpServer_->close();
-    }
+    bool wasRunning = tcpServer_->isListening();
+    tcpServer_->close();
+
+    QList<ClientHandler *> handlers;
     {
         QMutexLocker locker(&clientsMutex_);
-        QList<ClientHandler *> handlers = clients_.values();
+        handlers = clients_.values();
+        wasRunning = wasRunning || !handlers.isEmpty();
         clients_.clear();
-        locker.unlock();
-        for (ClientHandler *h : handlers) {
-            h->disconnectClient();
-            h->deleteLater();
-        }
+        mutedUsers_.clear();
     }
-    mutedUsers_.clear();
-    totalConnections_ = 0;
+
+    for (ClientHandler *handler : handlers) {
+        handler->disconnectClient();
+        handler->deleteLater();
+    }
+
     totalMessages_ = 0;
-    emit onlineUsersUpdated(QStringList());
-    emit mutedUsersUpdated(QStringList());
+    startTime_ = {};
+    emit onlineUsersUpdated({});
+    emit mutedUsersUpdated({});
     emitStats();
-    appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "服务端已停止");
-    qInfo() << "Chat server stopped";
+    if (wasRunning) {
+        appendLog(logPrefix() + "服务端已停止");
+        qInfo() << "Chat server stopped";
+    }
 }
 
 void ChatServer::onNewConnection() {
     while (tcpServer_->hasPendingConnections()) {
         QTcpSocket *socket = tcpServer_->nextPendingConnection();
-        qintptr descriptor = socket->socketDescriptor();
-        ClientHandler *handler = new ClientHandler(socket, this);
+        if (!socket) {
+            continue;
+        }
+
+        const qintptr descriptor = socket->socketDescriptor();
+        auto *handler = new ClientHandler(socket, this);
         {
             QMutexLocker locker(&clientsMutex_);
-            clients_[descriptor] = handler;
+            clients_.insert(descriptor, handler);
         }
-        connect(handler, &ClientHandler::messageReceived, this, &ChatServer::onMessageReceived);
-        connect(handler, &ClientHandler::disconnected, this, &ChatServer::onClientDisconnected);
+
+        connect(handler, &ClientHandler::messageReceived,
+                this, &ChatServer::onMessageReceived);
+        connect(handler, &ClientHandler::disconnected,
+                this, &ChatServer::onClientDisconnected);
         handler->start();
-        ++totalConnections_;
-        const QString peerInfo = QString("%1:%2").arg(socket->peerAddress().toString()).arg(socket->peerPort());
-        QString entry = QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "新连接 " + peerInfo;
+
+        const QString peerInfo = QString("%1:%2")
+            .arg(socket->peerAddress().toString())
+            .arg(socket->peerPort());
+        const QString entry = logPrefix() + "新连接 " + peerInfo;
         appendLog(entry);
         emitStats();
         qInfo() << entry;
@@ -72,189 +130,247 @@ void ChatServer::onMessageReceived(qintptr socketDescriptor, QJsonObject message
     ClientHandler *handler = nullptr;
     {
         QMutexLocker locker(&clientsMutex_);
-        if (!clients_.contains(socketDescriptor)) {
-            qWarning() << "Message from unknown descriptor:" << socketDescriptor;
-            return;
-        }
-        handler = clients_.value(socketDescriptor);
+        handler = clients_.value(socketDescriptor, nullptr);
     }
-
     if (!handler) {
-        qWarning() << "Null handler for descriptor:" << socketDescriptor;
+        qWarning() << "Message from unknown descriptor:" << socketDescriptor;
         return;
     }
 
-    QString typeStr = message["type"].toString();
-    Protocol::MessageType type = Protocol::typeFromString(typeStr);
+    const QString typeName = message.value("type").toString();
+    const Protocol::MessageType type = Protocol::typeFromString(typeName);
+    switch (type) {
+    case Protocol::MessageType::Register:
+        handleRegister(handler, message);
+        return;
+    case Protocol::MessageType::Login:
+        handleLogin(handler, message);
+        return;
+    case Protocol::MessageType::Heartbeat:
+        return;
+    default:
+        break;
+    }
 
-    if (type == Protocol::MessageType::Chat || type == Protocol::MessageType::GroupChat) {
-        ++totalMessages_;
-        emitStats();
+    if (!handler->isAuthenticated()) {
+        handler->sendMessage(Protocol::createSystemMessage("请先登录后再执行该操作"));
+        return;
     }
 
     switch (type) {
-    case Protocol::MessageType::Login:
-        handleLogin(handler, message);
-        break;
-    case Protocol::MessageType::Register:
-        handleRegister(handler, message);
-        break;
     case Protocol::MessageType::Chat:
-        handleChatMessage(message);
+        handleChatMessage(handler, message);
         break;
     case Protocol::MessageType::GroupChat:
-        handleGroupChat(message);
+        handleGroupChat(handler, message);
         break;
     case Protocol::MessageType::UserListRequest:
-        if (handler->isAuthenticated()) {
-            sendUserList();
-        }
+        sendUserList();
         break;
     case Protocol::MessageType::Logout:
-        handleLogout(socketDescriptor, message);
-        break;
-    case Protocol::MessageType::Heartbeat:
+        handleLogout(handler);
         break;
     default:
-        qWarning() << "Unknown message type:" << typeStr;
+        qWarning() << "Unknown or client-forbidden message type:" << typeName;
+        handler->sendMessage(Protocol::createSystemMessage("不支持的消息类型"));
         break;
     }
 }
 
 void ChatServer::onClientDisconnected(qintptr socketDescriptor) {
-    QMutexLocker locker(&clientsMutex_);
-    ClientHandler *handler = clients_.take(socketDescriptor);
-    if (handler) {
-        QString username = handler->username();
-        if (!username.isEmpty()) {
-            locker.unlock();
-            broadcastSystemMessage(username + " 离开了聊天室");
-            sendUserList();
-            appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + username + " 断开连接（已认证）");
-            locker.relock();
+    ClientHandler *handler = nullptr;
+    QString username;
+    bool wasAuthenticated = false;
+    QStringList muted;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        handler = clients_.take(socketDescriptor);
+        if (handler) {
+            username = handler->username();
+            wasAuthenticated = handler->isAuthenticated() && !username.isEmpty();
             mutedUsers_.remove(username);
-            emit mutedUsersUpdated(mutedUsers_.values());
-        } else {
-            appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "未认证客户端断开连接");
+            muted = mutedUsers_.values();
         }
-        handler->deleteLater();
     }
-    locker.unlock();
+
+    if (!handler) {
+        return;
+    }
+    handler->deleteLater();
+
+    if (wasAuthenticated) {
+        broadcastSystemMessage(username + " 离开了聊天室");
+        sendUserList();
+        emit mutedUsersUpdated(muted);
+        appendLog(logPrefix() + username + " 断开连接（已认证）");
+    } else {
+        appendLog(logPrefix() + "未认证客户端断开连接");
+    }
     emitStats();
 }
 
 void ChatServer::handleLogin(ClientHandler *handler, const QJsonObject &msg) {
-    QString username = msg["username"].toString();
-    QString password = msg["password"].toString();
-
-    bool success = UserManager::instance().loginUser(username, password);
-    QJsonObject response = Protocol::createLoginResponse(success,
-        success ? "登录成功" : "用户名或密码错误");
-
-    if (success) {
-        handler->setUsername(username);
-        handler->setAuthenticated(true);
-        QMutexLocker locker(&clientsMutex_);
-        for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-            if (it.value() != handler && it.value()->isAuthenticated() && it.value()->username() == username) {
-                response = Protocol::createLoginResponse(false, "该账号已在其他地方登录");
-                handler->setAuthenticated(false);
-                handler->setUsername("");
-                break;
-            }
-        }
-    }
-
-    handler->sendMessage(response);
-
     if (handler->isAuthenticated()) {
-        broadcastSystemMessage(username + " 加入了聊天室");
-        sendUserList();
-        appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + username + " 登录成功");
-        emitStats();
-    }
-}
-
-void ChatServer::handleRegister(ClientHandler *handler, const QJsonObject &msg) {
-    QString username = msg["username"].toString();
-    QString password = msg["password"].toString();
-
-    if (username.length() < 2 || password.length() < 4) {
-        handler->sendMessage(Protocol::createRegisterResponse(false, "用户名至少2个字符，密码至少4个字符"));
+        handler->sendMessage(Protocol::createLoginResponse(false, "当前连接已经登录"));
         return;
     }
 
-    bool success = UserManager::instance().registerUser(username, password);
-    handler->sendMessage(Protocol::createRegisterResponse(success,
-        success ? "注册成功，请登录" : "用户名已存在"));
-}
+    const QString username = msg.value("username").toString().trimmed();
+    const QString password = msg.value("password").toString();
+    if (!validUsername(username) || !validPassword(password)) {
+        handler->sendMessage(Protocol::createLoginResponse(false, "用户名或密码格式错误"));
+        return;
+    }
 
-void ChatServer::handleChatMessage(const QJsonObject &msg) {
-    QString from = msg["from"].toString();
-    QString to = msg["to"].toString();
+    if (!UserManager::instance().loginUser(username, password)) {
+        handler->sendMessage(Protocol::createLoginResponse(false, "用户名或密码错误"));
+        return;
+    }
+
+    bool duplicateLogin = false;
     {
         QMutexLocker locker(&clientsMutex_);
-        if (mutedUsers_.contains(from)) {
-            for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-                if (it.value()->isAuthenticated() && it.value()->username() == from) {
-                    it.value()->sendMessage(Protocol::createSystemMessage("你已被禁言，无法发送消息", to));
-                    break;
-                }
-            }
-            return;
-        }
-    }
-    QMutexLocker locker(&clientsMutex_);
-    bool sentToRecipient = false;
-    for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-        if (it.value()->isAuthenticated() && it.value()->username() == to) {
-            it.value()->sendMessage(msg);
-            sentToRecipient = true;
-            break;
-        }
-    }
-    if (sentToRecipient) {
-        for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-            if (it.value()->isAuthenticated() && it.value()->username() == from) {
-                it.value()->sendMessage(msg);
+        for (ClientHandler *client : clients_) {
+            if (client != handler && client->isAuthenticated()
+                && client->username() == username) {
+                duplicateLogin = true;
                 break;
             }
         }
     }
+    if (duplicateLogin) {
+        handler->sendMessage(Protocol::createLoginResponse(
+            false, "该账号已在其他地方登录"));
+        return;
+    }
+
+    handler->setUsername(username);
+    handler->setAuthenticated(true);
+    handler->sendMessage(Protocol::createLoginResponse(true, "登录成功"));
+    broadcastSystemMessage(username + " 加入了聊天室");
+    sendUserList();
+    appendLog(logPrefix() + username + " 登录成功");
+    emitStats();
 }
 
-void ChatServer::handleGroupChat(const QJsonObject &msg) {
-    QString from = msg["from"].toString();
+void ChatServer::handleRegister(ClientHandler *handler, const QJsonObject &msg) {
+    if (handler->isAuthenticated()) {
+        handler->sendMessage(Protocol::createRegisterResponse(
+            false, "请先退出当前账号再注册新用户"));
+        return;
+    }
+
+    const QString username = msg.value("username").toString().trimmed();
+    const QString password = msg.value("password").toString();
+    if (!validUsername(username) || !validPassword(password)) {
+        handler->sendMessage(Protocol::createRegisterResponse(
+            false, "用户名需为2-32个字符，密码需为4-128个字符"));
+        return;
+    }
+
+    UserManager &users = UserManager::instance();
+    if (users.userExists(username)) {
+        handler->sendMessage(Protocol::createRegisterResponse(false, "用户名已存在"));
+        return;
+    }
+    if (!users.registerUser(username, password)) {
+        handler->sendMessage(Protocol::createRegisterResponse(false, "用户数据保存失败"));
+        return;
+    }
+    handler->sendMessage(Protocol::createRegisterResponse(true, "注册成功，请登录"));
+}
+
+void ChatServer::handleChatMessage(ClientHandler *handler, const QJsonObject &msg) {
+    const QString to = msg.value("to").toString().trimmed();
+    const QString content = msg.value("content").toString().trimmed();
+    if (!validUsername(to) || content.isEmpty() || content.size() > kMaxChatLength) {
+        handler->sendMessage(Protocol::createSystemMessage(
+            "私聊目标或消息内容无效", to));
+        return;
+    }
+
+    ++totalMessages_;
+    emitStats();
+    if (isUserMuted(handler->username())) {
+        handler->sendMessage(Protocol::createSystemMessage(
+            "你已被禁言，无法发送消息", to));
+        return;
+    }
+
+    ClientHandler *recipient = nullptr;
     {
         QMutexLocker locker(&clientsMutex_);
-        if (mutedUsers_.contains(from)) {
-            for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-                if (it.value()->isAuthenticated() && it.value()->username() == from) {
-                    it.value()->sendMessage(Protocol::createSystemMessage("你已被禁言，无法发送消息", "general"));
-                    break;
-                }
+        for (ClientHandler *client : clients_) {
+            if (client->isAuthenticated() && client->username() == to) {
+                recipient = client;
+                break;
             }
-            return;
         }
     }
-    broadcastMessage(msg);
+    if (!recipient) {
+        handler->sendMessage(Protocol::createSystemMessage(
+            "目标用户当前不在线", to));
+        return;
+    }
+
+    const QJsonObject trustedMessage = Protocol::createChatMessage(
+        handler->username(), to, content);
+    recipient->sendMessage(trustedMessage);
+    if (recipient != handler) {
+        handler->sendMessage(trustedMessage);
+    }
 }
 
-void ChatServer::handleLogout(qintptr socketDescriptor, const QJsonObject &msg) {
-    Q_UNUSED(msg)
-    QMutexLocker locker(&clientsMutex_);
-    if (clients_.contains(socketDescriptor)) {
-        ClientHandler *handler = clients_[socketDescriptor];
-        handler->setAuthenticated(false);
+void ChatServer::handleGroupChat(ClientHandler *handler, const QJsonObject &msg) {
+    const QString content = msg.value("content").toString().trimmed();
+    if (content.isEmpty() || content.size() > kMaxChatLength) {
+        handler->sendMessage(Protocol::createSystemMessage("群聊消息内容无效", "general"));
+        return;
     }
+
+    ++totalMessages_;
+    emitStats();
+    if (isUserMuted(handler->username())) {
+        handler->sendMessage(Protocol::createSystemMessage(
+            "你已被禁言，无法发送消息", "general"));
+        return;
+    }
+
+    broadcastMessage(Protocol::createGroupChatMessage(handler->username(), content));
+}
+
+void ChatServer::handleLogout(ClientHandler *handler) {
+    const QString username = handler->username();
+    handler->setAuthenticated(false);
+    handler->setUsername({});
+
+    QStringList muted;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        mutedUsers_.remove(username);
+        muted = mutedUsers_.values();
+    }
+    if (!username.isEmpty()) {
+        broadcastSystemMessage(username + " 退出了聊天室");
+        appendLog(logPrefix() + username + " 主动退出");
+    }
+    emit mutedUsersUpdated(muted);
+    sendUserList();
+    emitStats();
 }
 
 void ChatServer::broadcastMessage(const QJsonObject &message) {
-    QMutexLocker locker(&clientsMutex_);
-    for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-        if (it.value()->isAuthenticated()) {
-            it.value()->sendMessage(message);
+    QList<ClientHandler *> recipients;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        for (ClientHandler *client : clients_) {
+            if (client->isAuthenticated()) {
+                recipients.append(client);
+            }
         }
+    }
+    for (ClientHandler *recipient : recipients) {
+        recipient->sendMessage(message);
     }
 }
 
@@ -262,15 +378,19 @@ void ChatServer::sendUserList() {
     QStringList onlineUsers;
     {
         QMutexLocker locker(&clientsMutex_);
-        for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-            if (it.value()->isAuthenticated()) {
-                onlineUsers.append(it.value()->username());
+        for (ClientHandler *client : clients_) {
+            if (client->isAuthenticated()) {
+                onlineUsers.append(client->username());
             }
         }
     }
-    QJsonArray arr;
-    for (const QString &u : onlineUsers) arr.append(u);
-    broadcastMessage(Protocol::createUserListMessage(arr));
+    onlineUsers.sort(Qt::CaseInsensitive);
+
+    QJsonArray users;
+    for (const QString &username : onlineUsers) {
+        users.append(username);
+    }
+    broadcastMessage(Protocol::createUserListMessage(users));
     emit onlineUsersUpdated(onlineUsers);
 }
 
@@ -279,35 +399,54 @@ void ChatServer::broadcastSystemMessage(const QString &content) {
 }
 
 void ChatServer::muteUser(const QString &username) {
-    QMutexLocker locker(&clientsMutex_);
-    mutedUsers_.insert(username);
-    locker.unlock();
-    appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "禁言用户: " + username);
-    broadcastSystemMessage(username + " 已被管理员禁言");
-    sendUserList();
-    emit mutedUsersUpdated(mutedUsers_.values());
-    for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-        if (it.value()->isAuthenticated() && it.value()->username() == username) {
-            it.value()->sendMessage(Protocol::createSystemMessage("你已被管理员禁言，无法发送消息"));
-            break;
+    const QString normalized = username.trimmed();
+    ClientHandler *target = nullptr;
+    QStringList muted;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        for (ClientHandler *client : clients_) {
+            if (client->isAuthenticated() && client->username() == normalized) {
+                target = client;
+                break;
+            }
         }
+        if (!target || mutedUsers_.contains(normalized)) {
+            return;
+        }
+        mutedUsers_.insert(normalized);
+        muted = mutedUsers_.values();
     }
+
+    appendLog(logPrefix() + "禁言用户: " + normalized);
+    broadcastSystemMessage(normalized + " 已被管理员禁言");
+    target->sendMessage(Protocol::createSystemMessage("你已被管理员禁言，无法发送消息"));
+    emit mutedUsersUpdated(muted);
 }
 
 void ChatServer::unmuteUser(const QString &username) {
-    QMutexLocker locker(&clientsMutex_);
-    mutedUsers_.remove(username);
-    locker.unlock();
-    appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "解除禁言: " + username);
-    broadcastSystemMessage(username + " 已被管理员解除禁言");
-    sendUserList();
-    emit mutedUsersUpdated(mutedUsers_.values());
-    for (auto it = clients_.begin(); it != clients_.end(); ++it) {
-        if (it.value()->isAuthenticated() && it.value()->username() == username) {
-            it.value()->sendMessage(Protocol::createSystemMessage("你已被解除禁言，可以正常发言"));
-            break;
+    const QString normalized = username.trimmed();
+    ClientHandler *target = nullptr;
+    QStringList muted;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        if (!mutedUsers_.remove(normalized)) {
+            return;
         }
+        for (ClientHandler *client : clients_) {
+            if (client->isAuthenticated() && client->username() == normalized) {
+                target = client;
+                break;
+            }
+        }
+        muted = mutedUsers_.values();
     }
+
+    appendLog(logPrefix() + "解除禁言: " + normalized);
+    broadcastSystemMessage(normalized + " 已被管理员解除禁言");
+    if (target) {
+        target->sendMessage(Protocol::createSystemMessage("你已被解除禁言，可以正常发言"));
+    }
+    emit mutedUsersUpdated(muted);
 }
 
 bool ChatServer::isUserMuted(const QString &username) const {
@@ -315,14 +454,13 @@ bool ChatServer::isUserMuted(const QString &username) const {
     return mutedUsers_.contains(username);
 }
 
-QStringList ChatServer::mutedUsers() const {
-    QMutexLocker locker(&clientsMutex_);
-    return mutedUsers_.values();
-}
-
 void ChatServer::serverBroadcast(const QString &content) {
-    broadcastMessage(Protocol::createSystemMessage("【服务器公告】" + content));
-    appendLog(QDateTime::currentDateTime().toString("[hh:mm:ss] ") + "服务器公告已发送");
+    const QString normalized = content.trimmed();
+    if (normalized.isEmpty() || normalized.size() > kMaxChatLength) {
+        return;
+    }
+    broadcastMessage(Protocol::createSystemMessage("【服务器公告】" + normalized));
+    appendLog(logPrefix() + "服务器公告已发送");
 }
 
 void ChatServer::appendLog(const QString &entry) {
@@ -330,19 +468,27 @@ void ChatServer::appendLog(const QString &entry) {
 }
 
 void ChatServer::emitStats() {
-    if (!startTime_.isValid()) return;
-    qint64 secs = startTime_.secsTo(QDateTime::currentDateTime());
-    int hours = int(secs) / 3600;
-    int mins = (int(secs) % 3600) / 60;
-    int s = int(secs) % 60;
-    QString uptime;
-    if (hours > 0) {
-        uptime = QString("%1时%2分%3秒").arg(hours).arg(mins).arg(s);
-    } else if (mins > 0) {
-        uptime = QString("%1分%2秒").arg(mins).arg(s);
-    } else {
-        uptime = QString("%1秒").arg(s);
+    int activeConnections = 0;
+    {
+        QMutexLocker locker(&clientsMutex_);
+        activeConnections = clients_.size();
     }
-    QMutexLocker locker(&clientsMutex_);
-    emit serverStatsUpdated(clients_.size(), totalMessages_, uptime);
+
+    QString uptime = "-";
+    if (startTime_.isValid()) {
+        const qint64 seconds = qMax<qint64>(
+            0, startTime_.secsTo(QDateTime::currentDateTime()));
+        const qint64 hours = seconds / 3600;
+        const qint64 minutes = (seconds % 3600) / 60;
+        const qint64 remainingSeconds = seconds % 60;
+        if (hours > 0) {
+            uptime = QString("%1时%2分%3秒")
+                .arg(hours).arg(minutes).arg(remainingSeconds);
+        } else if (minutes > 0) {
+            uptime = QString("%1分%2秒").arg(minutes).arg(remainingSeconds);
+        } else {
+            uptime = QString("%1秒").arg(remainingSeconds);
+        }
+    }
+    emit serverStatsUpdated(activeConnections, totalMessages_, uptime);
 }
