@@ -2,13 +2,23 @@
 #define PROTOCOL_H
 
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonParseError>
 #include <QByteArray>
 #include <QString>
 #include <QDateTime>
 #include <QDebug>
 
 namespace Protocol {
+
+constexpr quint32 MAX_PAYLOAD_SIZE = 1024U * 1024U;
+
+enum class DecodeStatus {
+    Complete,
+    Incomplete,
+    Invalid
+};
 
 enum class MessageType {
     Register,
@@ -38,23 +48,6 @@ inline MessageType typeFromString(const QString &str) {
     if (str == "heartbeat") return MessageType::Heartbeat;
     if (str == "logout") return MessageType::Logout;
     return MessageType::Unknown;
-}
-
-inline QString typeToString(MessageType type) {
-    switch (type) {
-    case MessageType::Register: return "register";
-    case MessageType::Login: return "login";
-    case MessageType::LoginResponse: return "login_response";
-    case MessageType::RegisterResponse: return "register_response";
-    case MessageType::Chat: return "chat";
-    case MessageType::GroupChat: return "group_chat";
-    case MessageType::System: return "system";
-    case MessageType::UserList: return "user_list";
-    case MessageType::UserListRequest: return "user_list_request";
-    case MessageType::Heartbeat: return "heartbeat";
-    case MessageType::Logout: return "logout";
-    default: return "unknown";
-    }
 }
 
 inline QJsonObject createRegisterRequest(const QString &username, const QString &password) {
@@ -103,16 +96,17 @@ inline QJsonObject createHeartbeat() {
     return {{"type", "heartbeat"}, {"timestamp", QDateTime::currentSecsSinceEpoch()}};
 }
 
-inline QJsonObject createLogoutMessage(const QString &username) {
-    return {{"type", "logout"}, {"username", username}};
-}
-
 inline QByteArray serializeMessage(const QJsonObject &json) {
-    QJsonDocument doc(json);
-    QByteArray body = doc.toJson(QJsonDocument::Compact);
+    const QByteArray body = QJsonDocument(json).toJson(QJsonDocument::Compact);
+    if (body.isEmpty() || quint32(body.size()) > MAX_PAYLOAD_SIZE) {
+        qWarning() << "Refusing to serialize invalid or oversized message:"
+                   << body.size() << "bytes";
+        return {};
+    }
+
     QByteArray header;
     header.resize(4);
-    quint32 size = quint32(body.size());
+    const quint32 size = quint32(body.size());
     header[0] = char((size >> 24) & 0xFF);
     header[1] = char((size >> 16) & 0xFF);
     header[2] = char((size >> 8) & 0xFF);
@@ -120,17 +114,50 @@ inline QByteArray serializeMessage(const QJsonObject &json) {
     return header + body;
 }
 
-inline bool deserializeMessage(QByteArray &buffer, QJsonObject &outJson) {
-    if (buffer.size() < 4) return false;
-    quint32 size = (quint8(buffer[0]) << 24) | (quint8(buffer[1]) << 16) |
-                   (quint8(buffer[2]) << 8) | quint8(buffer[3]);
-    if (quint32(buffer.size()) < 4 + size) return false;
-    QByteArray body = buffer.mid(4, size);
-    buffer.remove(0, 4 + size);
-    QJsonDocument doc = QJsonDocument::fromJson(body);
-    if (doc.isNull()) return false;
+inline DecodeStatus deserializeMessage(QByteArray &buffer, QJsonObject &outJson,
+                                       QString *errorMessage = nullptr) {
+    if (buffer.size() < 4) {
+        return DecodeStatus::Incomplete;
+    }
+
+    const quint32 size = (quint32(quint8(buffer[0])) << 24)
+                       | (quint32(quint8(buffer[1])) << 16)
+                       | (quint32(quint8(buffer[2])) << 8)
+                       | quint32(quint8(buffer[3]));
+    if (size == 0 || size > MAX_PAYLOAD_SIZE) {
+        if (errorMessage) {
+            *errorMessage = QString("非法消息长度: %1 字节").arg(size);
+        }
+        buffer.clear();
+        return DecodeStatus::Invalid;
+    }
+
+    if (quint32(buffer.size()) < 4U + size) {
+        return DecodeStatus::Incomplete;
+    }
+
+    const QByteArray body = buffer.mid(4, int(size));
+    buffer.remove(0, int(4U + size));
+
+    QJsonParseError parseError;
+    const QJsonDocument doc = QJsonDocument::fromJson(body, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        if (errorMessage) {
+            *errorMessage = QString("JSON 消息格式错误: %1").arg(parseError.errorString());
+        }
+        buffer.clear();
+        return DecodeStatus::Invalid;
+    }
+    if (!doc.isObject()) {
+        if (errorMessage) {
+            *errorMessage = "JSON 消息根节点必须是对象";
+        }
+        buffer.clear();
+        return DecodeStatus::Invalid;
+    }
+
     outJson = doc.object();
-    return true;
+    return DecodeStatus::Complete;
 }
 
 }

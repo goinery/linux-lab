@@ -5,8 +5,6 @@
 
 namespace Constants {
     constexpr quint16 DEFAULT_PORT = 8888;
-    constexpr int BUFFER_SIZE = 4096;
-    constexpr int HEADER_SIZE = 4;
     constexpr int HEARTBEAT_INTERVAL = 30000;
     constexpr int RECONNECT_INTERVAL = 3000;
     constexpr int MAX_RECONNECT_ATTEMPTS = 5;

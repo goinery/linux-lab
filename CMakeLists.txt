@@ -15,13 +15,18 @@ find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
 
 add_subdirectory(src)
 
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 install(TARGETS ${CHATROOM_PROGRAM_NAME} RUNTIME DESTINATION bin)
 
 set(CPACK_PACKAGE_NAME "${CHATROOM_PROGRAM_NAME}")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_DESCRIPTION "Modern Multi-threaded Chat Room")
+set(CPACK_PACKAGE_DESCRIPTION "Qt5 TCP Local Area Network Chat Room")
 set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5core5a,libqt5widgets5,libqt5network5,fontconfig")
-set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-cjk,fonts-wqy-microhei,fcitx5-frontend-qt5|fcitx-frontend-qt5|ibus")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "student")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5core5a,libqt5widgets5,libqt5network5")
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fcitx5-frontend-qt5|fcitx-frontend-qt5|ibus")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Gong Yi")
 include(CPack)
