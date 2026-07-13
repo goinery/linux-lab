@@ -1,0 +1,68 @@
+# Build directories and compiled outputs
+/build/
+/build-*/
+/out/
+/dist/
+/bin/
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dll
+*.dylib
+*.exe
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt.user
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+build.make
+flags.make
+depend.make
+progress.make
+compile_commands.json
+
+# Qt generated files
+*_autogen/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.moc
+*.pch
+*.pdb
+*.pro.user
+*.pro.user.*
+*.autosave
+
+# Packages
+*.deb
+*.rpm
+*.tar.gz
+*.AppImage
+_CPack_Packages/
+
+# Runtime data
+/users.json
+*.log
+
+# Editor and local tool state
+/.vscode/
+/.idea/
+/.cache/
+*.swp
+*.swo
+*.bak
+*~
+.DS_Store
+
+# Local font backups
+*.ttf.bak
+
+.gitignore.local
