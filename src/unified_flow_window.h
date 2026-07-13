@@ -63,7 +63,6 @@ private:
     void setCurrentPage(QWidget *page, const QString &subtitle);
     void setStatus(QLabel *label, const QString &text, const char *kind);
     Qt::Edges calcEdge(const QPoint &pos, const QSize &sz) const;
-    void setEdgeCursor(Qt::Edges e);
     QRect resizedGeometry(const QPoint &globalPos) const;
 
     QStackedWidget *pages_;

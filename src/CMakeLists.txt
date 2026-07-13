@@ -40,8 +40,6 @@ add_executable(${CHATROOM_PROGRAM_NAME}
     unified_flow_window_builder.cpp
     theme_manager.h
     theme_manager.cpp
-    cursor_manager.h
-    cursor_manager.cpp
     ${COMMON_SOURCES}
     ${SERVER_SOURCES}
     ${CLIENT_SOURCES}

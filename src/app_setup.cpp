@@ -7,7 +7,6 @@
 #include <QFontDatabase>
 
 #include "constants.h"
-#include "cursor_manager.h"
 #include "unified_flow_window.h"
 
 namespace {
@@ -84,9 +83,6 @@ int runApp(int argc, char *argv[]) {
     if (!configureApplicationFont(app)) {
         return 1;
     }
-
-    // 初始化自定义光标（从 PNG 资源加载，回退到 Qt 内置光标）
-    CursorManager::instance().initialize();
 
     QCommandLineParser parser;
     parser.setApplicationDescription("ChatRoom");

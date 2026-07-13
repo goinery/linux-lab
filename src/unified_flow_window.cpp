@@ -1,5 +1,4 @@
 #include "unified_flow_window.h"
-#include "cursor_manager.h"
 #include "theme_manager.h"
 
 #include <QApplication>
@@ -392,25 +391,21 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
                 // Wayland intentionally ignore client-side move() requests.
                 if (QWindow *window = windowHandle(); window && window->startSystemMove()) {
                     dragging_ = false;
-                    titleBar_->setCursor(CursorManager::instance().move());
                     return true;
                 }
 #endif
                 dragStartPos_ = me->globalPos() - frameGeometry().topLeft();
                 dragging_ = true;
-                titleBar_->setCursor(CursorManager::instance().move());
                 return true;
             }
         } else if (event->type() == QEvent::MouseMove) {
             QMouseEvent *me = static_cast<QMouseEvent *>(event);
-            titleBar_->setCursor(CursorManager::instance().move());
             if (dragging_) {
                 move(me->globalPos() - dragStartPos_);
             }
             return true;
         } else if (event->type() == QEvent::MouseButtonRelease) {
             dragging_ = false;
-            titleBar_->setCursor(CursorManager::instance().move());
             return true;
         } else if (event->type() == QEvent::MouseButtonDblClick) {
             onWinMaxRestore();
@@ -426,7 +421,6 @@ bool UnifiedFlowWindow::eventFilter(QObject *obj, QEvent *event) {
                     setGeometry(resizedGeometry(me->globalPos()));
                     return true;
                 }
-                setEdgeCursor(pointerEdges);
             } else if (me->button() == Qt::LeftButton) {
                 Qt::Edges e = pointerEdges;
                 if (e != 0) {
@@ -466,21 +460,6 @@ Qt::Edges UnifiedFlowWindow::calcEdge(const QPoint &pos, const QSize &sz) const 
     if (pos.y() <= m) e |= Qt::TopEdge;
     if (pos.y() >= sz.height() - m) e |= Qt::BottomEdge;
     return Qt::Edges(e);
-}
-
-void UnifiedFlowWindow::setEdgeCursor(Qt::Edges e) {
-    auto &cm = CursorManager::instance();
-    switch (e) {
-    case Qt::LeftEdge: case Qt::RightEdge:
-        setCursor(cm.sizeHor()); break;
-    case Qt::TopEdge: case Qt::BottomEdge:
-        setCursor(cm.sizeVer()); break;
-    case Qt::LeftEdge | Qt::TopEdge: case Qt::RightEdge | Qt::BottomEdge:
-        setCursor(cm.sizeFDiag()); break;
-    case Qt::LeftEdge | Qt::BottomEdge: case Qt::RightEdge | Qt::TopEdge:
-        setCursor(cm.sizeBDiag()); break;
-    default: setCursor(cm.arrow()); break;
-    }
 }
 
 QRect UnifiedFlowWindow::resizedGeometry(const QPoint &globalPos) const {

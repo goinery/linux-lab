@@ -51,7 +51,6 @@
 - **四套主题**：素白、森氧、云海、夜航，一键切换。
 - **固定内嵌字体**：构建时把 `resources/fonts/font.ttf` 打包进二进制，运行时直接设为全局字体，不扫描或下载系统字体。
 - **输入法自适应**：自动检测并配置 `QT_IM_MODULE` / `XMODIFIERS`，兼容 ibus 与 fcitx。
-- **自定义鼠标光标**：从 PNG 资源加载，回退到 Qt 内置光标。
 
 ---
 
@@ -216,7 +215,6 @@ chatroom [-H host] [-p port] [-s] [--help] [--version]
 
 - `unified_flow_window_builder.cpp`：拆分出的 UI 构建逻辑，保持主窗口类可读。
 - `theme_manager`：主题调色板 + 模板渲染，详见 [主题与字体](#主题与字体)。
-- `cursor_manager`：自定义鼠标光标加载。
 - `app_setup`：字体嵌入加载、输入法环境配置、`QApplication` 启动与命令行解析。
 
 ---
@@ -344,16 +342,14 @@ ctest --test-dir build -R server_integration_test --output-on-failure
 ├── install.sh                   # 依赖安装脚本
 ├── users.json                   # 用户数据（运行时生成，Git 忽略）
 ├── resources/
-│   ├── themes/template.qss      # 主题模板（结构 + 选择器）
 │   ├── fonts/font.ttf           # 唯一内嵌字体
-│   └── cursors/                 # 自定义光标 PNG
+│   └── themes/template.qss      # 主题模板（结构 + 选择器）
 ├── src/
     ├── main.cpp                 # 入口，委托给 runApp()
     ├── app_setup.cpp/h          # 字体嵌入、IME 环境、QApplication 启动、命令行解析
     ├── unified_flow_window.cpp/h        # 单窗口主框架（QStackedWidget）
     ├── unified_flow_window_builder.cpp  # UI 构建逻辑（拆分自主窗口）
     ├── theme_manager.cpp/h      # 主题调色板 + 模板渲染
-    ├── cursor_manager.cpp/h     # 自定义光标
     ├── common/
     │   ├── constants.h          # 默认端口、心跳与重连常量
     │   └── protocol.h           # 线协议：4B 长度前缀 + JSON
@@ -366,7 +362,7 @@ ctest --test-dir build -R server_integration_test --output-on-failure
         ├── mainwindow.cpp/h     # 聊天 UI：用户列表、会话分页、气泡
         ├── mainwindow_userlist.cpp # 用户列表逻辑
         ├── message_widget.cpp/h # 消息气泡组件
-        └── resources.qrc        # QSS / 主题模板 / 光标资源
+        └── resources.qrc        # 主题模板与字体资源
 └── tests/                       # 协议、用户存储与服务端集成测试
 ```
 
